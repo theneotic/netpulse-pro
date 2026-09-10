@@ -1,0 +1,21 @@
+{
+  "name": "netpulse-pro",
+  "version": "1.0.0",
+  "description": "Enterprise Continuous Bandwidth & Latency Monitor",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx serve .",
+    "start": "npx serve ."
+  },
+  "keywords": [
+    "speed-test",
+    "bandwidth",
+    "latency",
+    "jitter",
+    "telemetry",
+    "chartjs",
+    "tailwind"
+  ],
+  "author": "theneotic",
+  "license": "MIT"
+}
