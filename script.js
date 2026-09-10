@@ -172,8 +172,46 @@ if (typeof document !== 'undefined') {
         restoreSavedConfig();
         initCharts();
         renderHistoryTable();
+        initEventListeners();
         updateUIState();
     });
+}
+
+function initEventListeners() {
+    const startBtn = $('start-btn');
+    if (startBtn) {
+        startBtn.addEventListener('click', (e) => {
+            if (e) e.preventDefault();
+            startMonitoring();
+        });
+    }
+    const stopBtn = $('stop-btn');
+    if (stopBtn) {
+        stopBtn.addEventListener('click', (e) => {
+            if (e) e.preventDefault();
+            stopMonitoring();
+        });
+    }
+    const singleBtn = $('single-btn');
+    if (singleBtn) {
+        singleBtn.addEventListener('click', (e) => {
+            if (e) e.preventDefault();
+            runSingleTest();
+        });
+    }
+
+    const intervalSel = $('interval-select');
+    if (intervalSel) {
+        intervalSel.addEventListener('change', () => {
+            try { localStorage.setItem(INTERVAL_KEY, intervalSel.value); } catch (e) {}
+        });
+    }
+    const sizeSel = $('size-select');
+    if (sizeSel) {
+        sizeSel.addEventListener('change', () => {
+            try { localStorage.setItem(SIZE_KEY, sizeSel.value); } catch (e) {}
+        });
+    }
 }
 
 function restoreSavedConfig() {
@@ -484,22 +522,22 @@ function updateUIState() {
     if (isMonitoring) {
         if (startBtn) {
             startBtn.disabled = true;
-            startBtn.className = 'flex-1 bg-indigo-950/60 text-indigo-400 cursor-not-allowed font-semibold py-3 px-4 rounded-xl transition border border-indigo-900/50 flex items-center justify-center space-x-2 text-sm';
+            startBtn.className = 'flex items-center justify-center gap-2 bg-[#e84d31]/20 text-[#e84d31]/40 border border-[#e84d31]/30 px-4 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition cursor-not-allowed';
         }
         if (stopBtn) {
             stopBtn.disabled = false;
-            stopBtn.className = 'flex-1 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-rose-600/30 flex items-center justify-center space-x-2 text-sm';
+            stopBtn.className = 'flex items-center justify-center gap-2 bg-[#e84d31] text-[#f4f1e8] hover:bg-[#17201f] border border-[#e84d31] px-4 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition cursor-pointer shadow-ink';
         }
         if (intervalSelect) intervalSelect.disabled = true;
         if (sizeSelect) sizeSelect.disabled = true;
     } else {
         if (startBtn) {
             startBtn.disabled = false;
-            startBtn.className = 'flex-1 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 text-sm';
+            startBtn.className = 'flex items-center justify-center gap-2 bg-[#e84d31] hover:bg-[#f4f1e8] text-[#17201f] border border-[#17201f] px-4 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition cursor-pointer shadow-ink';
         }
         if (stopBtn) {
             stopBtn.disabled = true;
-            stopBtn.className = 'flex-1 bg-slate-800/80 text-slate-500 cursor-not-allowed font-semibold py-3 px-4 rounded-xl transition border border-slate-700/50 flex items-center justify-center space-x-2 text-sm';
+            stopBtn.className = 'flex items-center justify-center gap-2 border border-[#8a9992]/40 text-[#8a9992]/40 px-4 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition cursor-not-allowed opacity-40';
         }
         if (intervalSelect) intervalSelect.disabled = false;
         if (sizeSelect) sizeSelect.disabled = false;
@@ -870,4 +908,14 @@ function exportJSON() {
         results: testHistory
     }, null, 2);
     downloadBlob(payload, 'application/json;charset=utf-8;', 'netpulse_pro_history_' + new Date().toISOString().slice(0, 10) + '.json');
+}
+
+/* -------------------- Global window bindings for handlers ----------------- */
+if (typeof window !== 'undefined') {
+    window.startMonitoring = startMonitoring;
+    window.stopMonitoring = stopMonitoring;
+    window.runSingleTest = runSingleTest;
+    window.clearHistory = clearHistory;
+    window.exportCSV = exportCSV;
+    window.exportJSON = exportJSON;
 }

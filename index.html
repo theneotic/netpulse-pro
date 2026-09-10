@@ -105,114 +105,51 @@
                     <span id="status-text" class="font-bold">System Idle</span>
                 </div>
 
-                <a href="#desk" class="group hidden sm:flex items-center gap-2 border-b border-[#17201f] pb-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] transition hover:border-[#e84d31] hover:text-[#e84d31]">
-                    Run Loop <i data-lucide="arrow-down-right" class="w-3 h-3 transition-transform group-hover:translate-y-0.5"></i>
-                </a>
+                <button onclick="startMonitoring()" class="group hidden sm:flex items-center gap-2 bg-[#e84d31] hover:bg-[#17201f] text-[#17201f] hover:text-[#f4f1e8] border border-[#17201f] px-3.5 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] transition cursor-pointer shadow-sm">
+                    Run Loop <i data-lucide="play" class="w-3 h-3"></i>
+                </button>
             </div>
         </div>
     </header>
 
     <main id="top">
-        <!-- Hero Section (/ 01) -->
-        <section class="border-b border-[#17201f] bg-[#f4f1e8]">
-            <div class="max-w-7xl mx-auto border-x border-[#17201f] grid min-h-[580px] grid-cols-1 lg:grid-cols-[1.08fr_0.92fr]">
-                <div class="flex flex-col justify-between border-b border-[#17201f] p-6 sm:p-10 lg:border-b-0 lg:border-r">
-                    <div>
-                        <p class="font-mono text-[10px] uppercase tracking-[0.15em] text-[#e84d31]">A continuous network desk / 01</p>
-                        <h1 class="font-display mt-6 max-w-[650px] text-[clamp(3.5rem,7.5vw,7rem)] font-semibold leading-[0.84] tracking-[-0.085em] text-[#17201f]">
-                            Measure line.<br />Know precisely.
-                        </h1>
-                        <p class="mt-8 max-w-md text-base leading-7 text-[#43504c] sm:text-lg">
-                            An unbuffered, client-side telemetry desk for measuring edge throughput, ping latency, and RFC 3550 jitter directly in your browser. Bring the connection. Watch every pulse.
-                        </p>
-                    </div>
-
-                    <div class="mt-10 grid gap-4 border-t border-[#17201f] pt-5 sm:grid-cols-[1fr_auto] sm:items-end">
-                        <p class="max-w-xs font-mono text-[10px] leading-5 uppercase tracking-[0.11em] text-[#52605b]">
-                            CLOUDFLARE EDGE NETWORK<br />
-                            CONTINUOUS UNBUFFERED SAMPLING
-                        </p>
-                        <a href="#desk" class="group inline-flex items-center justify-between bg-[#17201f] px-5 py-3.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[#f4f1e8] transition hover:bg-[#e84d31] sm:min-w-52">
-                            Start telemetry <i data-lucide="arrow-right" class="w-3 h-3 transition-transform group-hover:translate-x-1"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="cut-grid relative min-h-[440px] overflow-hidden p-6 sm:p-10 flex flex-col justify-between">
-                    <div class="border-b border-[#17201f] bg-[#f4f1e8]/90 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.12em] flex justify-between">
-                        <span>MEASUREMENT ROOM / REAL PROOF</span>
-                        <span>LIVE LINE</span>
-                    </div>
-
-                    <div class="relative my-auto grid h-[310px] max-w-[500px] grid-cols-[1.05fr_0.95fr] items-center gap-0 mx-auto w-full">
-                        <figure class="relative z-10 h-[85%] overflow-hidden border border-[#17201f] bg-[#d7e3df] shadow-ink-lg p-5 flex flex-col justify-between">
-                            <span class="font-mono text-[9px] uppercase tracking-[0.1em] px-2 py-1 bg-[#f4f1e8] border border-[#17201f] self-start">Ingress / 01</span>
-                            <div>
-                                <div class="font-mono text-[10px] uppercase text-[#52605b]">Throughput In</div>
-                                <div class="text-3xl font-bold tracking-tight text-[#17201f] mt-1">Download</div>
-                            </div>
-                            <div class="font-mono text-[9px] uppercase text-[#52605b]">Direct edge stream</div>
-                        </figure>
-
-                        <figure class="relative z-20 -ml-6 h-full border border-[#17201f] bg-[#f4f1e8] shadow-signal-lg p-5 flex flex-col justify-between">
-                            <span class="font-mono text-[9px] uppercase tracking-[0.1em] px-2 py-1 bg-[#e84d31] text-[#17201f] font-bold self-start">Egress / 02</span>
-                            <div>
-                                <div class="font-mono text-[10px] uppercase text-[#e84d31]">Throughput Out</div>
-                                <div class="text-3xl font-bold tracking-tight text-[#17201f] mt-1">Upload</div>
-                            </div>
-                            <div class="font-mono text-[9px] uppercase text-[#52605b]">Zero compression buffer</div>
-                        </figure>
-
-                        <span class="absolute left-[47%] top-1/2 z-30 grid size-9 -translate-y-1/2 place-items-center border border-[#17201f] bg-[#f4f1e8] text-[#17201f]">
-                            <i data-lucide="activity" class="w-4 h-4 text-[#e84d31]"></i>
-                        </span>
-                    </div>
-
-                    <div class="border-t border-[#17201f] pt-3 flex justify-between font-mono text-[10px] uppercase tracking-[0.11em] text-[#52605b]">
-                        <span>Zero telemetry retention</span>
-                        <span>Cadence / Loop mode</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Controls Console Section (/ 02) -->
+        <!-- Controls Console Section (/ 01) -->
         <section id="desk" class="border-b border-[#17201f] bg-[#17201f] py-12 text-[#f4f1e8]">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid gap-8 border-x border-[#60716a] lg:grid-cols-[0.34fr_0.66fr] lg:gap-12">
                 <div class="flex flex-col justify-between">
                     <div>
-                        <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-[#ef745e]">The instrument / 02</p>
-                        <h2 class="font-display mt-5 max-w-sm text-4xl font-semibold leading-[0.92] tracking-[-0.07em] sm:text-5xl">
-                            Start telemetry.<br /><span class="text-[#9fada7]">Halt at will.</span>
-                        </h2>
+                        <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-[#ef745e]">MONITORING CONFIGURATION / 01</p>
+                        <h1 class="font-display mt-4 max-w-sm text-3xl sm:text-4xl font-semibold leading-[0.95] tracking-[-0.07em]">
+                            Constant Telemetry.<br /><span class="text-[#9fada7]">Unbuffered Line.</span>
+                        </h1>
                         <p class="mt-4 text-sm leading-relaxed text-[#b2c0b9]">
-                            Configure test frequency and sample payloads. All measurements run client-side against Cloudflare speed endpoints with randomized nonces.
+                            Autonomous client-side testing against Cloudflare edge network endpoints. Continuous loop or precision single-shot diagnostics.
                         </p>
                     </div>
 
-                    <div class="mt-8 border border-[#60716a] bg-[#202b28] p-4 font-mono text-[10px] leading-5 uppercase tracking-[0.1em] text-[#9fada7] space-y-2">
+                    <div class="mt-6 border border-[#60716a] bg-[#202b28] p-4 font-mono text-[10px] leading-5 uppercase tracking-[0.1em] text-[#9fada7] space-y-2">
                         <div class="flex justify-between border-b border-[#60716a] pb-1.5">
                             <span>Testing Mode</span>
                             <span class="text-[#f4f1e8]">Autonomous Loop</span>
                         </div>
                         <div class="flex justify-between border-b border-[#60716a] pb-1.5">
                             <span>Payload Sizes</span>
-                            <span class="text-[#f4f1e8]">100KB – 25MB Dynamic</span>
+                            <span class="text-[#f4f1e8]">Signal Loop (~256 KB DL)</span>
                         </div>
                         <div class="flex justify-between">
-                            <span>Sampling Loop</span>
+                            <span>Cadence Status</span>
                             <span id="countdown-text" class="text-[#ef745e]">Standby</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="border border-[#8a9992] bg-[#202b28] p-6 sm:p-8">
+                <div class="border border-[#8a9992] bg-[#202b28] p-6 sm:p-8 shadow-ink">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
                         <div>
-                            <label class="block font-mono text-[10px] uppercase tracking-[0.12em] text-[#aebbb5] mb-2">
+                            <label for="interval-select" class="block font-mono text-[10px] uppercase tracking-[0.12em] text-[#aebbb5] mb-2 font-semibold">
                                 Test Interval
                             </label>
-                            <select id="interval-select" class="w-full bg-[#17201f] border border-[#60716a] px-3.5 py-3 font-mono text-xs text-[#f4f1e8] outline-none focus:border-[#ef745e]">
+                            <select id="interval-select" class="w-full bg-[#17201f] border border-[#60716a] px-3.5 py-3 font-mono text-xs text-[#f4f1e8] outline-none focus:border-[#ef745e] transition">
                                 <option value="2000">Continuous Fast (Every 2s)</option>
                                 <option value="5000" selected>Continuous Loop (Every 5s — Signal Loop)</option>
                                 <option value="15000">Every 15 Seconds</option>
@@ -221,25 +158,25 @@
                         </div>
 
                         <div>
-                            <label class="block font-mono text-[10px] uppercase tracking-[0.12em] text-[#aebbb5] mb-2">
-                                Test Payload Volume
+                            <label for="size-select" class="block font-mono text-[10px] uppercase tracking-[0.12em] text-[#aebbb5] mb-2 font-semibold">
+                                Payload Size
                             </label>
-                            <select id="size-select" class="w-full bg-[#17201f] border border-[#60716a] px-3.5 py-3 font-mono text-xs text-[#f4f1e8] outline-none focus:border-[#ef745e]">
-                                <option value="standard" selected>Standard Profile (100KB–10MB Dynamic)</option>
-                                <option value="light">Lightweight Profile (Low Data Usage)</option>
-                                <option value="stress">High-Load Stress Profile (Up to 25MB)</option>
+                            <select id="size-select" class="w-full bg-[#17201f] border border-[#60716a] px-3.5 py-3 font-mono text-xs text-[#f4f1e8] outline-none focus:border-[#ef745e] transition">
+                                <option value="1" selected>Signal Loop (~256 KB DL / 128 KB UL)</option>
+                                <option value="5">Standard (~1 MB DL / 512 KB UL)</option>
+                                <option value="15">High Stress (~4 MB DL / 2 MB UL)</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                        <button id="start-btn" class="flex items-center justify-center gap-2 bg-[#ef745e] hover:bg-[#f4f1e8] text-[#17201f] border border-[#ef745e] px-4 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition">
+                        <button id="start-btn" onclick="startMonitoring()" class="flex items-center justify-center gap-2 bg-[#e84d31] hover:bg-[#f4f1e8] text-[#17201f] border border-[#17201f] px-5 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition cursor-pointer shadow-ink">
                             <i data-lucide="play" class="w-3.5 h-3.5"></i> Start Loop
                         </button>
-                        <button id="stop-btn" disabled class="flex items-center justify-center gap-2 border border-[#ef745e] text-[#ef745e] hover:bg-[#ef745e] hover:text-[#17201f] px-4 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition disabled:opacity-30 disabled:cursor-not-allowed">
+                        <button id="stop-btn" onclick="stopMonitoring()" disabled class="flex items-center justify-center gap-2 border border-[#8a9992]/40 text-[#8a9992]/40 px-5 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition cursor-not-allowed opacity-40">
                             <i data-lucide="square" class="w-3.5 h-3.5"></i> Stop Loop
                         </button>
-                        <button id="single-btn" class="flex items-center justify-center gap-2 border border-[#8a9992] bg-[#17201f] text-[#f4f1e8] hover:border-[#ef745e] px-4 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition">
+                        <button id="single-btn" onclick="runSingleTest()" class="flex items-center justify-center gap-2 border border-[#17201f] bg-[#17201f] text-[#f4f1e8] hover:border-[#e84d31] hover:bg-[#e84d31] hover:text-[#17201f] px-5 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition cursor-pointer">
                             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Run Single Test
                         </button>
                     </div>
