@@ -4,7 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetPulse Pro - Enterprise Continuous Bandwidth & Latency Monitor</title>
+    <title>NetPulse Pro | Real-Time Continuous Internet Speed & Latency Diagnostics</title>
+    <meta name="description" content="NetPulse Pro is an autonomous, open-source network telemetry tool for measuring real-time download throughput, upload bandwidth, edge ping latency, and jitter.">
+    <meta name="keywords" content="speed test, bandwidth monitor, latency test, jitter test, network telemetry, Cloudflare speed test, continuous monitoring">
+    <meta name="author" content="The Neotic">
+    <meta name="theme-color" content="#090d16">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="NetPulse Pro | Continuous Internet Speed & Latency Diagnostics">
+    <meta property="og:description" content="Autonomous, privacy-first continuous network performance diagnostics directly in your browser with zero data collection.">
+    <meta property="og:image" content="/favicon.svg">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="NetPulse Pro | Continuous Network Diagnostics">
+    <meta name="twitter:description" content="Real-time internet speed, jitter, and latency telemetry using Cloudflare's global edge network.">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -14,9 +29,8 @@
                 extend: {
                     colors: {
                         darkbg: '#090d16',
-                        cardbg: '#111827',
-                        cardborder: '#1f293d',
-                        accentglow: '#6366f1'
+                        cardbg: '#101623',
+                        cardborder: '#1e293b'
                     },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
@@ -27,7 +41,7 @@
         }
     </script>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
         rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -36,34 +50,28 @@
 </head>
 
 <body
-    class="bg-darkbg text-slate-100 min-h-screen font-sans antialiased selection:bg-indigo-500 selection:text-white pb-16">
-
-    <!-- Background Glow Effects -->
-    <div class="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="fixed top-1/3 right-1/4 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none"></div>
+    class="bg-darkbg text-slate-100 min-h-screen font-sans antialiased selection:bg-indigo-500 selection:text-white pb-12 overflow-x-hidden">
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 relative z-10">
 
         <!-- Header -->
         <header
             class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-800/80 pb-6 gap-4">
-            <div class="flex items-center space-x-3">
+            <a href="/" class="flex items-center space-x-3 group">
                 <div
-                    class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                    <i data-lucide="activity" class="w-6 h-6 text-white"></i>
+                    class="w-11 h-11 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 group-hover:border-indigo-500/50 transition">
+                    <i data-lucide="activity" class="w-5 h-5"></i>
                 </div>
                 <div>
                     <div class="flex items-center space-x-2">
-                        <h1 class="text-2xl font-extrabold tracking-tight text-white">NetPulse <span
-                                class="text-indigo-400 font-semibold">Pro</span></h1>
+                        <span class="text-xl font-bold tracking-tight text-white">NetPulse <span
+                                class="text-indigo-400 font-semibold">Pro</span></span>
                         <span
-                            class="text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 py-0.5 px-2.5 rounded-full font-semibold uppercase tracking-wider">Live
-                            Telemetry</span>
+                            class="text-[10px] bg-slate-800 text-indigo-400 border border-slate-700 py-0.5 px-2 rounded-md font-semibold tracking-wider uppercase">Live Telemetry</span>
                     </div>
-                    <p class="text-slate-400 text-sm mt-0.5">Autonomous continuous internet speed, jitter, and latency
-                        diagnostics.</p>
+                    <p class="text-slate-400 text-xs mt-0.5">Continuous browser-to-edge bandwidth, ping, and jitter diagnostics.</p>
                 </div>
-            </div>
+            </a>
 
             <div class="flex items-center space-x-3">
                 <div id="connection-badge"
@@ -149,20 +157,17 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <!-- Download Card -->
             <div
-                class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl relative overflow-hidden group hover:border-indigo-500/50 transition duration-300">
-                <div
-                    class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition">
-                </div>
+                class="bg-cardbg rounded-2xl p-6 border border-cardborder shadow-lg relative overflow-hidden transition duration-200 hover:border-slate-700">
                 <div class="flex justify-between items-center mb-3">
                     <span
                         class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center space-x-1.5">
                         <i data-lucide="arrow-down-circle" class="w-4 h-4 text-indigo-400"></i>
                         <span>Download</span>
                     </span>
-                    <span class="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded font-mono">Mbps</span>
+                    <span class="text-[10px] bg-slate-800 text-indigo-400 px-2 py-0.5 rounded font-mono border border-slate-700">Mbps</span>
                 </div>
                 <div class="flex items-baseline space-x-2">
-                    <span id="metric-download" class="text-5xl font-black text-white tracking-tight">0.00</span>
+                    <span id="metric-download" class="text-5xl font-extrabold text-white tracking-tight">0.00</span>
                 </div>
                 <div
                     class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60">
@@ -175,10 +180,7 @@
 
             <!-- Upload Card -->
             <div
-                class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl relative overflow-hidden group hover:border-emerald-500/50 transition duration-300">
-                <div
-                    class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition">
-                </div>
+                class="bg-cardbg rounded-2xl p-6 border border-cardborder shadow-lg relative overflow-hidden transition duration-200 hover:border-slate-700">
                 <div class="flex justify-between items-center mb-3">
                     <span
                         class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center space-x-1.5">
@@ -186,10 +188,10 @@
                         <span>Upload</span>
                     </span>
                     <span
-                        class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-mono">Mbps</span>
+                        class="text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded font-mono border border-slate-700">Mbps</span>
                 </div>
                 <div class="flex items-baseline space-x-2">
-                    <span id="metric-upload" class="text-5xl font-black text-white tracking-tight">0.00</span>
+                    <span id="metric-upload" class="text-5xl font-extrabold text-white tracking-tight">0.00</span>
                 </div>
                 <div
                     class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60">
@@ -202,49 +204,43 @@
 
             <!-- Ping Card -->
             <div
-                class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl relative overflow-hidden group hover:border-amber-500/50 transition duration-300">
-                <div
-                    class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition">
-                </div>
+                class="bg-cardbg rounded-2xl p-6 border border-cardborder shadow-lg relative overflow-hidden transition duration-200 hover:border-slate-700">
                 <div class="flex justify-between items-center mb-3">
                     <span
                         class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center space-x-1.5">
                         <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
                         <span>Ping / Latency</span>
                     </span>
-                    <span class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono">ms</span>
+                    <span class="text-[10px] bg-slate-800 text-amber-400 px-2 py-0.5 rounded font-mono border border-slate-700">ms</span>
                 </div>
                 <div class="flex items-baseline space-x-2">
-                    <span id="metric-ping" class="text-5xl font-black text-white tracking-tight">0</span>
+                    <span id="metric-ping" class="text-5xl font-extrabold text-white tracking-tight">0</span>
                 </div>
                 <div
                     class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60">
                     <span id="ping-status-text" class="text-slate-400 font-medium">Round trip time</span>
-                    <span id="ping-quality" class="text-slate-500 font-semibold">—</span>
+                    <span id="ping-quality" class="text-slate-500 font-semibold">Ready</span>
                 </div>
             </div>
 
             <!-- Jitter Card -->
             <div
-                class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl relative overflow-hidden group hover:border-cyan-500/50 transition duration-300">
-                <div
-                    class="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition">
-                </div>
+                class="bg-cardbg rounded-2xl p-6 border border-cardborder shadow-lg relative overflow-hidden transition duration-200 hover:border-slate-700">
                 <div class="flex justify-between items-center mb-3">
                     <span
                         class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center space-x-1.5">
                         <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i>
                         <span>Jitter</span>
                     </span>
-                    <span class="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded font-mono">ms</span>
+                    <span class="text-[10px] bg-slate-800 text-cyan-400 px-2 py-0.5 rounded font-mono border border-slate-700">ms</span>
                 </div>
                 <div class="flex items-baseline space-x-2">
-                    <span id="metric-jitter" class="text-5xl font-black text-white tracking-tight">0</span>
+                    <span id="metric-jitter" class="text-5xl font-extrabold text-white tracking-tight">0</span>
                 </div>
                 <div
                     class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60">
                     <span id="jitter-status-text" class="text-slate-400 font-medium">Variance stability</span>
-                    <span id="jitter-quality" class="text-slate-500 font-semibold">—</span>
+                    <span id="jitter-quality" class="text-slate-500 font-semibold">Ready</span>
                 </div>
             </div>
         </div>
@@ -328,6 +324,22 @@
                 </table>
             </div>
         </div>
+
+        <!-- Professional Footer -->
+        <footer class="mt-12 pt-6 border-t border-slate-800/80 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-2">
+                <span class="font-semibold text-slate-400">NetPulse Pro</span>
+                <span>&copy; 2026. Free, client-side network diagnostics.</span>
+            </div>
+            <div class="flex items-center space-x-6 text-slate-400">
+                <a href="privacy.html" class="hover:text-indigo-400 transition">Privacy Policy</a>
+                <a href="terms.html" class="hover:text-indigo-400 transition">Terms of Service</a>
+                <a href="https://github.com/theneotic/netpulse-pro" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-400 transition flex items-center space-x-1">
+                    <span>Source</span>
+                    <i data-lucide="external-link" class="w-3 h-3"></i>
+                </a>
+            </div>
+        </footer>
     </div>
 
     <!-- Initialize Lucide Icons -->
@@ -335,7 +347,7 @@
         lucide.createIcons();
     </script>
     <!-- Main Script -->
-    <script src="script.js?v=3.0.0"></script>
+    <script src="script.js?v=3.1.0"></script>
 </body>
 
 </html>

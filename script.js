@@ -91,11 +91,11 @@ function $(id) {
 }
 
 function formatMbps(mbps) {
-    return (mbps == null || Number.isNaN(mbps)) ? '—' : mbps.toFixed(2);
+    return (mbps == null || Number.isNaN(mbps)) ? '0.00' : mbps.toFixed(2);
 }
 
 function formatMs(ms) {
-    return (ms == null || Number.isNaN(ms)) ? '—' : ms.toFixed(1);
+    return (ms == null || Number.isNaN(ms)) ? '0.0' : ms.toFixed(1);
 }
 
 function round2(v) { return Math.round(v * 100) / 100; }
@@ -566,8 +566,8 @@ async function runSingleTest() {
             console.error('Ping failed:', e);
             const mPing = $('metric-ping');
             const mJitter = $('metric-jitter');
-            if (mPing) mPing.textContent = '—';
-            if (mJitter) mJitter.textContent = '—';
+            if (mPing) mPing.textContent = '0.0';
+            if (mJitter) mJitter.textContent = '0.0';
             if (pingStatus) pingStatus.textContent = 'Unreachable';
         }
 
@@ -592,7 +592,7 @@ async function runSingleTest() {
             if (e.name === 'AbortError') return;
             console.error('Download failed:', e);
             const mDownload = $('metric-download');
-            if (mDownload) mDownload.textContent = '—';
+            if (mDownload) mDownload.textContent = '0.00';
             if (dlProgress) dlProgress.textContent = 'Failed';
             if (dlBar) dlBar.style.width = '0%';
         }
@@ -614,7 +614,7 @@ async function runSingleTest() {
             if (e.name === 'AbortError') return;
             console.error('Upload failed:', e);
             const mUpload = $('metric-upload');
-            if (mUpload) mUpload.textContent = '—';
+            if (mUpload) mUpload.textContent = '0.00';
             if (ulProgress) ulProgress.textContent = 'Failed';
             if (ulBar) ulBar.style.width = '0%';
         }
