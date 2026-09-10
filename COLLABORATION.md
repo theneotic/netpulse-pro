@@ -89,3 +89,23 @@ DOM ids present) ✅ · local server 200s ✅.
 
 **Next for Roo Code:** TASK-101 (Web Worker), TASK-102 (multi-server latency).
 Reconsider using `httpbin.org` anywhere — replace with CF endpoints.
+
+### 2026-09-10 — Antigravity: Signal-Loop Continuous Engine & Production Launch Polish
+
+1. **CORS & Reliability Fix**:
+   - Removed offending `Cache-Control` / `Accept-Encoding` request headers that caused CORS preflight rejection on Cloudflare edge in web browsers.
+   - Added `res.arrayBuffer()` parsing for zero-lock, cross-browser compatibility.
+
+2. **Signal-Loop Continuous Speed Testing Engine**:
+   - Replaced heavy chunked downloads with Signal-Loop's rapid, non-blocking telemetry architecture.
+   - Added user-controlled continuous loop (2s, 5s, 15s cadences) with instant `AbortController` cancellation upon Stop.
+   - Added Peak Download and Peak Upload tracking across test sessions.
+
+3. **Production Polish & Anti-Vibecoding Standards**:
+   - Eliminated purple gradient glow orbs and em-dash (`—`) placeholders.
+   - Added `favicon.svg`, `robots.txt`, `sitemap.xml`, and custom `404.html`.
+   - Added standalone `privacy.html` and `terms.html` legal compliance pages.
+   - Added complete OpenGraph, Twitter card, and theme-color metadata.
+   - Updated `vercel.json` with HSTS, X-Frame-Options, Nosniff, and Permissions-Policy headers.
+   - Full test validation: `node --check script.js` ✅, `tests/idcheck.js` ✅, `tests/engine.spec.js` ✅.
+
