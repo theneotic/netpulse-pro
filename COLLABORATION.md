@@ -49,3 +49,43 @@ Preserve all IDs and integration hooks used by script.js. Update COLLABORATION.m
 
 ## 📝 Recent Change Log
 * **Initial Setup**: Initialized Git repository, `.clinerules`, `.roomodes`, and collaborative mission control board.
+
+### 2026-09-10 — Cline: Engine rewrite → honest telemetry (Phases 1–5)
+
+**Roo Code action item (documented per `.clinerules`):** Cline rewrote the `script.js`
+telemetry engine because the previous version fabricated data:
+- `measureUploadSpeed()` returned `Math.max(mbps, 8 + Math.random()*12)` (fake numbers).
+- Ping failures injected random 15–25 ms values.
+- Upload hit `httpbin.org/post` (slow/rate-limited); download used a ~200 KB
+  compressed JS file (inaccurate).
+
+**What changed in `script.js` (telemetry domain — reason documented):**
+- All measurements now use `https://speed.cloudflare.com` (verified CORS `*`,
+  `no-store`):
+  - Download: streaming `GET /__down?bytes=N&cb=<nonce>`, byte-counted via
+    `ReadableStream`, timed with `performance.now()`.
+  - Upload: `POST /__up` with crypto-random Blob (`application/octet-stream`).
+  - Ping/jitter: 8 sequential `GET /__down?bytes=0&cb=<nonce>`; RTT = median,
+    jitter = mean abs successive diff (RFC 3550).
+- **Adaptive sizing**: download 2→10→25→50 MB, upload 1→2→5→10→20 MB (halts once
+  a stage runs ≥ 1.5 s); slow-link fallbacks (256 KB–1 MB / 64–256 KB) keep it
+  accurate from ~0.3 Mbps. Timeouts scale with payload size.
+- **Honest failures**: failed phases → `null` values, `Partial`/`Failed` status,
+  chart gaps. No `Math.random()` anywhere in measurement paths.
+- **Server badge** ("Mumbai, IN [BOM]"): reads CORS-exposed `cf-meta-*` headers,
+  falls back to `GET /cdn-cgi/trace` (CORS `*`).
+- **Scheduler**: drift-free chained `setTimeout` + queued tick + `localStorage`
+  interval persistence + countdown label.
+- History capped at **500**; CSV + new **JSON** export.
+- Function names called by HTML preserved (`runSingleTest`, `startMonitoring`,
+  `stopMonitoring`, `exportCSV`, `clearHistory`).
+
+**What changed in `index.html` (Cline domain):**
+- Pinned Chart.js `@4.4.4` UMD; added **Export JSON** button; added `#countdown-text`.
+
+**Verification:** `node --check script.js` ✅ · `tests/engine.spec.js` (real
+Cloudflare E2E: ping/jitter/dl/ul/server-info) ✅ · `tests/idcheck.js` (all 25
+DOM ids present) ✅ · local server 200s ✅.
+
+**Next for Roo Code:** TASK-101 (Web Worker), TASK-102 (multi-server latency).
+Reconsider using `httpbin.org` anywhere — replace with CF endpoints.

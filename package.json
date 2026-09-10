@@ -5,7 +5,9 @@
   "main": "index.html",
   "scripts": {
     "dev": "npx serve .",
-    "start": "npx serve ."
+    "start": "npx serve .",
+    "test": "node tests/engine.spec.js && node tests/idcheck.js",
+    "test:engine": "node tests/engine.spec.js"
   },
   "keywords": [
     "speed-test",

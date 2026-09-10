@@ -11,14 +11,15 @@
 
 ## 🌟 Highlights
 
-- ⏱️ **Continuous & Scheduled Testing**: Automated background runs with customizable intervals (`1m`, `5m`, `15m`, `30m`, `1h`) and manual *Run Test Now* triggers.
-- 📊 **Real-Time Dynamic Visualizations**: Dual interactive Chart.js line charts tracking both Bandwidth Throughput (Download/Upload in Mbps) and Latency Performance (Ping/Jitter in ms) over the last 20 tests.
-- 🎯 **High-Precision Diagnostic Engine**:
-  - **Ping & Jitter**: Microsecond-precision round-trip time (RTT) calculated with cache-busted HTTP `HEAD` requests.
-  - **Download Speed**: Multiplier-based chunked streaming through high-capacity CDN endpoints using `ReadableStream`.
-  - **Upload Speed**: Cryptographically secure binary blob generation sent via asynchronous `POST` requests.
-- 💾 **Local Data Persistence**: Saves complete telemetry logs in browser `localStorage` without tracking or server-side logging.
-- 📤 **Instant Data Export**: One-click export to CSV for network auditing, ISP dispute documentation, and historical reports.
+- ⏱️ **Continuous & Scheduled Testing**: Automated background runs with customizable intervals (`1m`, `5m`, `15m`, `30m`, `1h`) and manual *Run Test Now* triggers. Drift-free chained timer that never stacks skipped cycles.
+- 📊 **Real-Time Dynamic Visualizations**: Dual interactive Chart.js line charts tracking both Bandwidth Throughput (Download/Upload in Mbps) and Latency Performance (Ping/Jitter in ms) over the last 20 tests. Failed phases render as gaps, never fake zeros.
+- 🎯 **Honest, High-Precision Engine** (Cloudflare speed-test edge, CORS-enabled):
+  - **Ping & Jitter**: 8 sequential RTT probes (`GET /__down?bytes=0`) — median RTT + RFC 3550 jitter. No randomized fallbacks.
+  - **Download Speed**: streaming byte-counted download (`GET /__down?bytes=N`) with adaptive sizing 2→10→25→50 MB.
+  - **Upload Speed**: crypto-random Blob via `POST /__up`, adaptive 1→2→5→10→20 MB.
+  - Live server-node badge reads Cloudflare CDN metadata ("Mumbai, IN [BOM]").
+- 💾 **Local Data Persistence**: Saves complete telemetry logs in browser `localStorage` (capped at 500 runs) without tracking or server-side logging.
+- 📤 **Instant Data Export**: One-click CSV **and JSON** export for network auditing, ISP dispute documentation, and historical reports.
 - 🎨 **Modern Cyber-Dark UI**: Glassmorphism aesthetic built with Tailwind CSS, glowing indicators, responsive progress bars, and Lucide icons.
 
 ---
@@ -61,6 +62,27 @@ python -m http.server 8080
 ```
 Navigate to `http://localhost:8080`.
 
+Alternatively use the bundled VS Code launch config (`.vscode/launch.json`) which
+opens `http://localhost:8080` in Chrome.
+
+---
+
+## 🧪 Tests
+
+No dependencies — everything runs on Node's built-ins and hits the live
+Cloudflare speed-test endpoints (like the browser does).
+
+```bash
+# Syntax check
+node --check script.js
+
+# E2E engine test (real ping/jitter/download/upload + server-info + no-Math.random audit)
+node tests/engine.spec.js
+
+# DOM contract test (every id referenced by script.js exists in index.html)
+node tests/idcheck.js
+```
+
 ---
 
 ## 📐 Architecture & Workflow
@@ -73,7 +95,7 @@ graph TD
     C -->|Manual| E[Run Single Test]
     D --> F[Execute Diagnostic Cycle]
     E --> F
-    F --> G[1. Measure Ping & Jitter via HEAD]
+    F --> G[1. Measure Ping & Jitter via empty-payload probes]
     G --> H[2. Measure Download Throughput]
     H --> I[3. Measure Upload Throughput]
     I --> J[Record Run to LocalStorage]
