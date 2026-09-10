@@ -669,24 +669,24 @@ function initCharts() {
                 {
                     label: 'Download (Mbps)',
                     data: [],
-                    borderColor: '#818cf8',
-                    backgroundColor: 'rgba(129, 140, 248, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.4,
+                    borderColor: '#e84d31',
+                    backgroundColor: 'rgba(232, 77, 49, 0.08)',
+                    borderWidth: 2.5,
+                    tension: 0.2,
                     fill: true,
                     pointRadius: 3,
-                    pointBackgroundColor: '#818cf8'
+                    pointBackgroundColor: '#e84d31'
                 },
                 {
                     label: 'Upload (Mbps)',
                     data: [],
-                    borderColor: '#34d399',
-                    backgroundColor: 'rgba(52, 211, 153, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.4,
+                    borderColor: '#17201f',
+                    backgroundColor: 'rgba(23, 32, 31, 0.06)',
+                    borderWidth: 2.5,
+                    tension: 0.2,
                     fill: true,
                     pointRadius: 3,
-                    pointBackgroundColor: '#34d399'
+                    pointBackgroundColor: '#17201f'
                 }
             ]
         },
@@ -694,16 +694,16 @@ function initCharts() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { labels: { color: '#94a3b8', font: { family: 'Inter', weight: 600 } } }
+                legend: { labels: { color: '#17201f', font: { family: 'DM Mono', weight: 600, size: 10 } } }
             },
             scales: {
                 x: {
-                    grid: { color: 'rgba(51, 65, 85, 0.4)' },
-                    ticks: { color: '#94a3b8', font: { family: 'Inter' } }
+                    grid: { color: 'rgba(23, 32, 31, 0.12)' },
+                    ticks: { color: '#52605b', font: { family: 'DM Mono', size: 10 } }
                 },
                 y: {
-                    grid: { color: 'rgba(51, 65, 85, 0.4)' },
-                    ticks: { color: '#94a3b8', font: { family: 'Inter' } },
+                    grid: { color: 'rgba(23, 32, 31, 0.12)' },
+                    ticks: { color: '#52605b', font: { family: 'DM Mono', size: 10 } },
                     beginAtZero: true
                 }
             }
@@ -719,24 +719,24 @@ function initCharts() {
                 {
                     label: 'Ping (ms)',
                     data: [],
-                    borderColor: '#fbbf24',
-                    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.4,
+                    borderColor: '#b33f29',
+                    backgroundColor: 'rgba(179, 63, 41, 0.08)',
+                    borderWidth: 2.5,
+                    tension: 0.2,
                     fill: true,
                     pointRadius: 3,
-                    pointBackgroundColor: '#fbbf24'
+                    pointBackgroundColor: '#b33f29'
                 },
                 {
                     label: 'Jitter (ms)',
                     data: [],
-                    borderColor: '#22d3ee',
-                    backgroundColor: 'rgba(34, 211, 238, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.4,
+                    borderColor: '#52605b',
+                    backgroundColor: 'rgba(82, 96, 91, 0.06)',
+                    borderWidth: 2.5,
+                    tension: 0.2,
                     fill: true,
                     pointRadius: 3,
-                    pointBackgroundColor: '#22d3ee'
+                    pointBackgroundColor: '#52605b'
                 }
             ]
         },
@@ -744,16 +744,16 @@ function initCharts() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { labels: { color: '#94a3b8', font: { family: 'Inter', weight: 600 } } }
+                legend: { labels: { color: '#17201f', font: { family: 'DM Mono', weight: 600, size: 10 } } }
             },
             scales: {
                 x: {
-                    grid: { color: 'rgba(51, 65, 85, 0.4)' },
-                    ticks: { color: '#94a3b8', font: { family: 'Inter' } }
+                    grid: { color: 'rgba(23, 32, 31, 0.12)' },
+                    ticks: { color: '#52605b', font: { family: 'DM Mono', size: 10 } }
                 },
                 y: {
-                    grid: { color: 'rgba(51, 65, 85, 0.4)' },
-                    ticks: { color: '#94a3b8', font: { family: 'Inter' } },
+                    grid: { color: 'rgba(23, 32, 31, 0.12)' },
+                    ticks: { color: '#52605b', font: { family: 'DM Mono', size: 10 } },
                     beginAtZero: true
                 }
             }
@@ -784,18 +784,18 @@ function updateChartsFromHistory() {
 function statusBadgeClasses(status) {
     switch (status) {
         case 'Success':
-            return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+            return 'bg-emerald-500/10 text-emerald-800 border border-emerald-600/30';
         case 'Partial':
-            return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+            return 'bg-amber-500/10 text-amber-800 border border-amber-600/30';
         case 'Failed':
-            return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+            return 'bg-rose-500/10 text-rose-800 border border-rose-600/30';
         default:
-            return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+            return 'bg-slate-200 text-slate-800 border border-slate-400';
     }
 }
 
 function cellValue(value) {
-    return value == null ? '—' : escapeHtml(value);
+    return value == null ? '0.0' : escapeHtml(value);
 }
 
 function renderHistoryTable() {

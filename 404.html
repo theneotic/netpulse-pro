@@ -1,27 +1,127 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - Page Not Found | NetPulse Pro</title>
+    <title>404 — Routing Fault | NetPulse Pro</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --paper: #f4f1e8;
+            --paper-card: #ffffff;
+            --mint: #d9e9df;
+            --ink: #17201f;
+            --ink-muted: #52605b;
+            --orange: #e84d31;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--paper);
+            color: var(--ink);
+            font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background-image:
+                linear-gradient(to right, rgba(23, 32, 31, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(23, 32, 31, 0.05) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+
+        .error-card {
+            max-width: 480px;
+            width: 100%;
+            background: var(--paper-card);
+            border: 2px solid var(--ink);
+            box-shadow: 6px 6px 0 var(--ink);
+            padding: 40px;
+            text-align: center;
+        }
+
+        .error-code {
+            font-family: 'DM Mono', monospace;
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1;
+            color: var(--orange);
+            margin-bottom: 12px;
+            letter-spacing: -0.04em;
+        }
+
+        .error-tag {
+            display: inline-block;
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: var(--ink);
+            color: var(--paper);
+            padding: 4px 10px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+        }
+
+        p {
+            font-size: 14px;
+            color: var(--ink-muted);
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+
+        .return-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            text-decoration: none;
+            background: var(--orange);
+            color: #ffffff;
+            border: 2px solid var(--ink);
+            padding: 12px 24px;
+            box-shadow: 3px 3px 0 var(--ink);
+            transition: all 0.15s ease;
+        }
+
+        .return-btn:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 5px 5px 0 var(--ink);
+            background: #d63f24;
+        }
+    </style>
 </head>
 
-<body class="bg-[#090d16] text-slate-100 min-h-screen flex items-center justify-center p-4 font-['Inter',sans-serif]">
-    <div class="max-w-md w-full text-center bg-slate-900/80 border border-slate-800 rounded-2xl p-8 shadow-2xl backdrop-blur-xl">
-        <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-2xl font-mono">
-            404
-        </div>
-        <h1 class="text-xl font-bold text-white mb-2">Endpoint Not Found</h1>
-        <p class="text-slate-400 text-sm mb-6 leading-relaxed">
-            The diagnostic path you requested does not exist or has been relocated.
+<body>
+    <div class="error-card">
+        <div class="error-code">404</div>
+        <div class="error-tag">Diagnostic Path Not Found</div>
+        <h1>Telemetry Route Fault</h1>
+        <p>
+            The requested probe endpoint or page does not exist on this edge host. Check the address or return to the main diagnostic console.
         </p>
-        <a href="/" class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition shadow-lg shadow-indigo-600/20">
-            Return to Dashboard
-        </a>
+        <a href="/" class="return-btn">&larr; Return to Telemetry Console</a>
     </div>
 </body>
 

@@ -1,7 +1,8 @@
 'use strict';
 const fs = require('fs');
-const html = fs.readFileSync('S:/The-Neotic/index.html', 'utf8');
-const js = fs.readFileSync('S:/The-Neotic/script.js', 'utf8');
+const path = require('path');
+const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const js = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
 
 const ids = [...new Set([...js.matchAll(/\$\('([^']+)'\)/g)].map(m => m[1]))];
 const missing = [];

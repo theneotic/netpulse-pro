@@ -1,353 +1,513 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetPulse Pro | Real-Time Continuous Internet Speed & Latency Diagnostics</title>
-    <meta name="description" content="NetPulse Pro is an autonomous, open-source network telemetry tool for measuring real-time download throughput, upload bandwidth, edge ping latency, and jitter.">
+    <title>NetPulse Pro | Continuous Network Telemetry Desk</title>
+    <meta name="description" content="NetPulse Pro is an autonomous, client-side network telemetry instrument for measuring real-time download throughput, upload bandwidth, edge ping latency, and jitter.">
     <meta name="keywords" content="speed test, bandwidth monitor, latency test, jitter test, network telemetry, Cloudflare speed test, continuous monitoring">
     <meta name="author" content="The Neotic">
-    <meta name="theme-color" content="#090d16">
+    <meta name="theme-color" content="#f4f1e8">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <!-- Open Graph / Social Sharing -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="NetPulse Pro | Continuous Internet Speed & Latency Diagnostics">
+    <meta property="og:title" content="NetPulse Pro | Continuous Network Telemetry Desk">
     <meta property="og:description" content="Autonomous, privacy-first continuous network performance diagnostics directly in your browser with zero data collection.">
     <meta property="og:image" content="/favicon.svg">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="NetPulse Pro | Continuous Network Diagnostics">
     <meta name="twitter:description" content="Real-time internet speed, jitter, and latency telemetry using Cloudflare's global edge network.">
 
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS with Clearcut Theme -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        darkbg: '#090d16',
-                        cardbg: '#101623',
-                        cardborder: '#1e293b'
+                        paper: '#f4f1e8',
+                        ink: '#17201f',
+                        signal: '#e84d31',
+                        'signal-soft': '#ef745e',
+                        mint: '#d9e9df',
+                        'grid-bg': '#e9e5da',
+                        'grid-line': '#c9c1af'
                     },
                     fontFamily: {
-                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+                        sans: ['"Instrument Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"DM Mono"', 'ui-monospace', 'monospace']
                     }
                 }
             }
         }
     </script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
-        rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        .cut-grid {
+            background-color: #e9e5da;
+            background-image:
+                linear-gradient(#c9c1af 1px, transparent 1px),
+                linear-gradient(90deg, #c9c1af 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+        .shadow-ink {
+            box-shadow: 8px 8px 0px #17201f;
+        }
+        .shadow-signal {
+            box-shadow: 8px 8px 0px #e84d31;
+        }
+        .shadow-ink-lg {
+            box-shadow: 10px 10px 0px #17201f;
+        }
+        .shadow-signal-lg {
+            box-shadow: 10px 10px 0px #e84d31;
+        }
+    </style>
 </head>
 
-<body
-    class="bg-darkbg text-slate-100 min-h-screen font-sans antialiased selection:bg-indigo-500 selection:text-white pb-12 overflow-x-hidden">
+<body class="bg-[#f4f1e8] text-[#17201f] min-h-screen font-sans antialiased selection:bg-[#e84d31] selection:text-[#f4f1e8] overflow-x-hidden">
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 relative z-10">
-
-        <!-- Header -->
-        <header
-            class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-800/80 pb-6 gap-4">
-            <a href="/" class="flex items-center space-x-3 group">
-                <div
-                    class="w-11 h-11 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 group-hover:border-indigo-500/50 transition">
-                    <i data-lucide="activity" class="w-5 h-5"></i>
-                </div>
-                <div>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-xl font-bold tracking-tight text-white">NetPulse <span
-                                class="text-indigo-400 font-semibold">Pro</span></span>
-                        <span
-                            class="text-[10px] bg-slate-800 text-indigo-400 border border-slate-700 py-0.5 px-2 rounded-md font-semibold tracking-wider uppercase">Live Telemetry</span>
-                    </div>
-                    <p class="text-slate-400 text-xs mt-0.5">Continuous browser-to-edge bandwidth, ping, and jitter diagnostics.</p>
-                </div>
+    <!-- Topbar Header -->
+    <header class="border-b border-[#17201f] bg-[#f4f1e8] sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex h-[74px] items-center justify-between gap-5">
+            <a href="/" class="flex items-center gap-3" aria-label="NetPulse Pro Home">
+                <span class="grid size-8 place-items-center bg-[#e84d31] text-sm font-bold text-[#17201f] font-mono">NP</span>
+                <span class="text-lg font-bold tracking-[-0.06em]">netpulse <span class="font-normal text-[#e84d31]">pro</span></span>
+                <span class="hidden font-mono text-[10px] tracking-[0.12em] text-[#63706b] sm:inline">/ TELEMETRY DESK</span>
             </a>
 
-            <div class="flex items-center space-x-3">
-                <div id="connection-badge"
-                    class="hidden sm:flex items-center space-x-2 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-medium text-slate-300">
-                    <i data-lucide="globe" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <nav class="hidden items-center gap-6 font-mono text-[10px] uppercase tracking-[0.12em] md:flex" aria-label="Primary navigation">
+                <a class="hover:text-[#e84d31] transition" href="#desk">Console</a>
+                <a class="hover:text-[#e84d31] transition" href="#telemetry">Metrics</a>
+                <a class="hover:text-[#e84d31] transition" href="#charts">Trace</a>
+                <a class="hover:text-[#e84d31] transition" href="#history">Log</a>
+                <a class="hover:text-[#e84d31] transition" href="#method">Method</a>
+            </nav>
+
+            <div class="flex items-center gap-3">
+                <div id="connection-badge" class="hidden sm:flex items-center gap-2 border border-[#17201f] bg-[#f4f1e8] px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#17201f]">
+                    <i data-lucide="globe" class="w-3.5 h-3.5 text-[#e84d31]"></i>
                     <span id="server-location-text">Global CDN Node</span>
                 </div>
-                <div id="status-indicator"
-                    class="flex items-center space-x-2.5 bg-slate-900/90 px-4 py-2 rounded-xl border border-slate-800 text-sm shadow-inner">
-                    <span class="w-2.5 h-2.5 rounded-full bg-slate-500" id="status-dot"></span>
-                    <span id="status-text" class="font-medium text-slate-300">System Idle</span>
-                </div>
-            </div>
-        </header>
 
-        <!-- Controls Console -->
-        <div
-            class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-2xl mb-8 relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
-                <i data-lucide="sliders" class="w-40 h-40 text-white"></i>
-            </div>
-            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center space-x-2">
-                <i data-lucide="cpu" class="w-4 h-4 text-indigo-400"></i>
-                <span>Monitoring Configuration</span>
-            </h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2 font-semibold">Test
-                        Interval</label>
-                    <div class="relative">
-                        <select id="interval-select"
-                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 appearance-none font-medium text-sm">
-                            <option value="2000">Continuous Fast (Every 2s)</option>
-                            <option value="5000" selected>Continuous Loop (Every 5s — Signal Loop)</option>
-                            <option value="15000">Every 15 Seconds</option>
-                            <option value="60000">Every 1 Minute</option>
-                            <option value="300000">Every 5 Minutes</option>
-                        </select>
-                        <div class="absolute right-3 top-3.5 pointer-events-none text-slate-400">
-                            <i data-lucide="chevron-down" class="w-4 h-4"></i>
-                        </div>
-                    </div>
+                <div class="flex items-center gap-2 border border-[#17201f] bg-[#f4f1e8] px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider">
+                    <span class="size-2 bg-[#17201f]" id="status-dot"></span>
+                    <span id="status-text" class="font-bold">System Idle</span>
                 </div>
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2 font-semibold">Payload
-                        Size</label>
-                    <div class="relative">
-                        <select id="size-select"
-                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 appearance-none font-medium text-sm">
-                            <option value="1" selected>Signal Loop (~256 KB DL / 128 KB UL)</option>
-                            <option value="5">Standard (~1 MB DL / 512 KB UL)</option>
-                            <option value="15">High Stress (~4 MB DL / 2 MB UL)</option>
-                        </select>
-                        <div class="absolute right-3 top-3.5 pointer-events-none text-slate-400">
-                            <i data-lucide="chevron-down" class="w-4 h-4"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex space-x-3">
-                    <button id="start-btn" onclick="startMonitoring()"
-                        class="flex-1 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 text-sm">
-                        <i data-lucide="play" class="w-4 h-4 fill-current"></i>
-                        <span>Start</span>
-                    </button>
-                    <button id="stop-btn" onclick="stopMonitoring()" disabled
-                        class="flex-1 bg-slate-800/80 text-slate-500 cursor-not-allowed font-semibold py-3 px-4 rounded-xl transition border border-slate-700/50 flex items-center justify-center space-x-2 text-sm">
-                        <i data-lucide="square" class="w-4 h-4 fill-current"></i>
-                        <span>Stop</span>
-                    </button>
-                </div>
-                <div>
-                    <button onclick="runSingleTest()" id="single-btn"
-                        class="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 hover:text-white font-semibold py-3 px-4 rounded-xl transition border border-slate-700 flex items-center justify-center space-x-2 text-sm shadow-sm">
-                        <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
-                        <span>Run Test Now</span>
-                    </button>
-                </div>
-            </div>
-            <p id="countdown-text" class="hidden text-xs text-slate-500 font-mono mt-3">Next test in --:--</p>
-        </div>
 
-        <!-- Live Metrics Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <!-- Download Card -->
-            <div
-                class="bg-cardbg rounded-2xl p-6 border border-cardborder shadow-lg relative overflow-hidden transition duration-200 hover:border-slate-700">
-                <div class="flex justify-between items-center mb-3">
-                    <span
-                        class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center space-x-1.5">
-                        <i data-lucide="arrow-down-circle" class="w-4 h-4 text-indigo-400"></i>
-                        <span>Download</span>
-                    </span>
-                    <span class="text-[10px] bg-slate-800 text-indigo-400 px-2 py-0.5 rounded font-mono border border-slate-700">Mbps</span>
-                </div>
-                <div class="flex items-baseline space-x-2">
-                    <span id="metric-download" class="text-5xl font-extrabold text-white tracking-tight">0.00</span>
-                </div>
-                <div
-                    class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60">
-                    <span id="download-progress-text" class="text-slate-400 font-medium">Ready to test</span>
-                    <div class="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                        <div id="download-bar" class="bg-indigo-500 h-full w-0 transition-all duration-300"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Upload Card -->
-            <div
-                class="bg-cardbg rounded-2xl p-6 border border-cardborder shadow-lg relative overflow-hidden transition duration-200 hover:border-slate-700">
-                <div class="flex justify-between items-center mb-3">
-                    <span
-                        class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center space-x-1.5">
-                        <i data-lucide="arrow-up-circle" class="w-4 h-4 text-emerald-400"></i>
-                        <span>Upload</span>
-                    </span>
-                    <span
-                        class="text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded font-mono border border-slate-700">Mbps</span>
-                </div>
-                <div class="flex items-baseline space-x-2">
-                    <span id="metric-upload" class="text-5xl font-extrabold text-white tracking-tight">0.00</span>
-                </div>
-                <div
-                    class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60">
-                    <span id="upload-progress-text" class="text-slate-400 font-medium">Ready to test</span>
-                    <div class="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                        <div id="upload-bar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Ping Card -->
-            <div
-                class="bg-cardbg rounded-2xl p-6 border border-cardborder shadow-lg relative overflow-hidden transition duration-200 hover:border-slate-700">
-                <div class="flex justify-between items-center mb-3">
-                    <span
-                        class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center space-x-1.5">
-                        <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
-                        <span>Ping / Latency</span>
-                    </span>
-                    <span class="text-[10px] bg-slate-800 text-amber-400 px-2 py-0.5 rounded font-mono border border-slate-700">ms</span>
-                </div>
-                <div class="flex items-baseline space-x-2">
-                    <span id="metric-ping" class="text-5xl font-extrabold text-white tracking-tight">0</span>
-                </div>
-                <div
-                    class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60">
-                    <span id="ping-status-text" class="text-slate-400 font-medium">Round trip time</span>
-                    <span id="ping-quality" class="text-slate-500 font-semibold">Ready</span>
-                </div>
-            </div>
-
-            <!-- Jitter Card -->
-            <div
-                class="bg-cardbg rounded-2xl p-6 border border-cardborder shadow-lg relative overflow-hidden transition duration-200 hover:border-slate-700">
-                <div class="flex justify-between items-center mb-3">
-                    <span
-                        class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center space-x-1.5">
-                        <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i>
-                        <span>Jitter</span>
-                    </span>
-                    <span class="text-[10px] bg-slate-800 text-cyan-400 px-2 py-0.5 rounded font-mono border border-slate-700">ms</span>
-                </div>
-                <div class="flex items-baseline space-x-2">
-                    <span id="metric-jitter" class="text-5xl font-extrabold text-white tracking-tight">0</span>
-                </div>
-                <div
-                    class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60">
-                    <span id="jitter-status-text" class="text-slate-400 font-medium">Variance stability</span>
-                    <span id="jitter-quality" class="text-slate-500 font-semibold">Ready</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Real-time Charts -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <div class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-base font-bold text-slate-200 flex items-center space-x-2">
-                        <i data-lucide="trending-up" class="w-4 h-4 text-indigo-400"></i>
-                        <span>Bandwidth Performance (Mbps)</span>
-                    </h3>
-                    <span class="text-xs text-slate-500 font-mono">Last 20 Tests</span>
-                </div>
-                <div class="relative h-80">
-                    <canvas id="bandwidthChart"></canvas>
-                </div>
-            </div>
-            <div class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-base font-bold text-slate-200 flex items-center space-x-2">
-                        <i data-lucide="pulse" class="w-4 h-4 text-amber-400"></i>
-                        <span>Latency & Jitter (ms)</span>
-                    </h3>
-                    <span class="text-xs text-slate-500 font-mono">Last 20 Tests</span>
-                </div>
-                <div class="relative h-80">
-                    <canvas id="latencyChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- History Table & Export -->
-        <div class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl">
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <div>
-                    <h3 class="text-base font-bold text-slate-200 flex items-center space-x-2">
-                        <i data-lucide="file-text" class="w-4 h-4 text-indigo-400"></i>
-                        <span>Test History Logs</span>
-                    </h3>
-                    <p class="text-slate-400 text-xs mt-0.5">Persistent records stored locally in browser storage.</p>
-                </div>
-                <div class="flex space-x-3 w-full sm:w-auto">
-                    <button onclick="exportCSV()"
-                        class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-700 transition flex items-center justify-center space-x-2">
-                        <i data-lucide="download" class="w-4 h-4"></i>
-                        <span>Export CSV</span>
-                    </button>
-                    <button onclick="exportJSON()"
-                        class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-700 transition flex items-center justify-center space-x-2">
-                        <i data-lucide="file-text" class="w-4 h-4"></i>
-                        <span>Export JSON</span>
-                    </button>
-                    <button onclick="clearHistory()"
-                        class="flex-1 sm:flex-none bg-rose-950/40 hover:bg-rose-900/60 active:scale-95 text-rose-300 px-4 py-2.5 rounded-xl text-sm font-semibold border border-rose-900/50 transition flex items-center justify-center space-x-2">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        <span>Clear History</span>
-                    </button>
-                </div>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr
-                            class="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400 font-bold">
-                            <th class="py-3 px-4">Timestamp</th>
-                            <th class="py-3 px-4">Download</th>
-                            <th class="py-3 px-4">Upload</th>
-                            <th class="py-3 px-4">Ping</th>
-                            <th class="py-3 px-4">Jitter</th>
-                            <th class="py-3 px-4">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-table-body"
-                        class="divide-y divide-slate-800/60 text-sm text-slate-300 font-medium">
-                        <tr>
-                            <td colspan="6" class="py-8 text-center text-slate-500 font-normal">No test history recorded
-                                yet. Start monitoring or run a single test.</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Professional Footer -->
-        <footer class="mt-12 pt-6 border-t border-slate-800/80 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="flex items-center space-x-2">
-                <span class="font-semibold text-slate-400">NetPulse Pro</span>
-                <span>&copy; 2026. Free, client-side network diagnostics.</span>
-            </div>
-            <div class="flex items-center space-x-6 text-slate-400">
-                <a href="privacy.html" class="hover:text-indigo-400 transition">Privacy Policy</a>
-                <a href="terms.html" class="hover:text-indigo-400 transition">Terms of Service</a>
-                <a href="https://github.com/theneotic/netpulse-pro" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-400 transition flex items-center space-x-1">
-                    <span>Source</span>
-                    <i data-lucide="external-link" class="w-3 h-3"></i>
+                <a href="#desk" class="group hidden sm:flex items-center gap-2 border-b border-[#17201f] pb-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] transition hover:border-[#e84d31] hover:text-[#e84d31]">
+                    Run Loop <i data-lucide="arrow-down-right" class="w-3 h-3 transition-transform group-hover:translate-y-0.5"></i>
                 </a>
             </div>
-        </footer>
-    </div>
+        </div>
+    </header>
+
+    <main id="top">
+        <!-- Hero Section (/ 01) -->
+        <section class="border-b border-[#17201f] bg-[#f4f1e8]">
+            <div class="max-w-7xl mx-auto border-x border-[#17201f] grid min-h-[580px] grid-cols-1 lg:grid-cols-[1.08fr_0.92fr]">
+                <div class="flex flex-col justify-between border-b border-[#17201f] p-6 sm:p-10 lg:border-b-0 lg:border-r">
+                    <div>
+                        <p class="font-mono text-[10px] uppercase tracking-[0.15em] text-[#e84d31]">A continuous network desk / 01</p>
+                        <h1 class="font-display mt-6 max-w-[650px] text-[clamp(3.5rem,7.5vw,7rem)] font-semibold leading-[0.84] tracking-[-0.085em] text-[#17201f]">
+                            Measure line.<br />Know precisely.
+                        </h1>
+                        <p class="mt-8 max-w-md text-base leading-7 text-[#43504c] sm:text-lg">
+                            An unbuffered, client-side telemetry desk for measuring edge throughput, ping latency, and RFC 3550 jitter directly in your browser. Bring the connection. Watch every pulse.
+                        </p>
+                    </div>
+
+                    <div class="mt-10 grid gap-4 border-t border-[#17201f] pt-5 sm:grid-cols-[1fr_auto] sm:items-end">
+                        <p class="max-w-xs font-mono text-[10px] leading-5 uppercase tracking-[0.11em] text-[#52605b]">
+                            CLOUDFLARE EDGE NETWORK<br />
+                            CONTINUOUS UNBUFFERED SAMPLING
+                        </p>
+                        <a href="#desk" class="group inline-flex items-center justify-between bg-[#17201f] px-5 py-3.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[#f4f1e8] transition hover:bg-[#e84d31] sm:min-w-52">
+                            Start telemetry <i data-lucide="arrow-right" class="w-3 h-3 transition-transform group-hover:translate-x-1"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="cut-grid relative min-h-[440px] overflow-hidden p-6 sm:p-10 flex flex-col justify-between">
+                    <div class="border-b border-[#17201f] bg-[#f4f1e8]/90 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.12em] flex justify-between">
+                        <span>MEASUREMENT ROOM / REAL PROOF</span>
+                        <span>LIVE LINE</span>
+                    </div>
+
+                    <div class="relative my-auto grid h-[310px] max-w-[500px] grid-cols-[1.05fr_0.95fr] items-center gap-0 mx-auto w-full">
+                        <figure class="relative z-10 h-[85%] overflow-hidden border border-[#17201f] bg-[#d7e3df] shadow-ink-lg p-5 flex flex-col justify-between">
+                            <span class="font-mono text-[9px] uppercase tracking-[0.1em] px-2 py-1 bg-[#f4f1e8] border border-[#17201f] self-start">Ingress / 01</span>
+                            <div>
+                                <div class="font-mono text-[10px] uppercase text-[#52605b]">Throughput In</div>
+                                <div class="text-3xl font-bold tracking-tight text-[#17201f] mt-1">Download</div>
+                            </div>
+                            <div class="font-mono text-[9px] uppercase text-[#52605b]">Direct edge stream</div>
+                        </figure>
+
+                        <figure class="relative z-20 -ml-6 h-full border border-[#17201f] bg-[#f4f1e8] shadow-signal-lg p-5 flex flex-col justify-between">
+                            <span class="font-mono text-[9px] uppercase tracking-[0.1em] px-2 py-1 bg-[#e84d31] text-[#17201f] font-bold self-start">Egress / 02</span>
+                            <div>
+                                <div class="font-mono text-[10px] uppercase text-[#e84d31]">Throughput Out</div>
+                                <div class="text-3xl font-bold tracking-tight text-[#17201f] mt-1">Upload</div>
+                            </div>
+                            <div class="font-mono text-[9px] uppercase text-[#52605b]">Zero compression buffer</div>
+                        </figure>
+
+                        <span class="absolute left-[47%] top-1/2 z-30 grid size-9 -translate-y-1/2 place-items-center border border-[#17201f] bg-[#f4f1e8] text-[#17201f]">
+                            <i data-lucide="activity" class="w-4 h-4 text-[#e84d31]"></i>
+                        </span>
+                    </div>
+
+                    <div class="border-t border-[#17201f] pt-3 flex justify-between font-mono text-[10px] uppercase tracking-[0.11em] text-[#52605b]">
+                        <span>Zero telemetry retention</span>
+                        <span>Cadence / Loop mode</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Controls Console Section (/ 02) -->
+        <section id="desk" class="border-b border-[#17201f] bg-[#17201f] py-12 text-[#f4f1e8]">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid gap-8 border-x border-[#60716a] lg:grid-cols-[0.34fr_0.66fr] lg:gap-12">
+                <div class="flex flex-col justify-between">
+                    <div>
+                        <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-[#ef745e]">The instrument / 02</p>
+                        <h2 class="font-display mt-5 max-w-sm text-4xl font-semibold leading-[0.92] tracking-[-0.07em] sm:text-5xl">
+                            Start telemetry.<br /><span class="text-[#9fada7]">Halt at will.</span>
+                        </h2>
+                        <p class="mt-4 text-sm leading-relaxed text-[#b2c0b9]">
+                            Configure test frequency and sample payloads. All measurements run client-side against Cloudflare speed endpoints with randomized nonces.
+                        </p>
+                    </div>
+
+                    <div class="mt-8 border border-[#60716a] bg-[#202b28] p-4 font-mono text-[10px] leading-5 uppercase tracking-[0.1em] text-[#9fada7] space-y-2">
+                        <div class="flex justify-between border-b border-[#60716a] pb-1.5">
+                            <span>Testing Mode</span>
+                            <span class="text-[#f4f1e8]">Autonomous Loop</span>
+                        </div>
+                        <div class="flex justify-between border-b border-[#60716a] pb-1.5">
+                            <span>Payload Sizes</span>
+                            <span class="text-[#f4f1e8]">100KB – 25MB Dynamic</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Sampling Loop</span>
+                            <span id="countdown-text" class="text-[#ef745e]">Standby</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border border-[#8a9992] bg-[#202b28] p-6 sm:p-8">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
+                        <div>
+                            <label class="block font-mono text-[10px] uppercase tracking-[0.12em] text-[#aebbb5] mb-2">
+                                Test Interval
+                            </label>
+                            <select id="interval-select" class="w-full bg-[#17201f] border border-[#60716a] px-3.5 py-3 font-mono text-xs text-[#f4f1e8] outline-none focus:border-[#ef745e]">
+                                <option value="2000">Continuous Fast (Every 2s)</option>
+                                <option value="5000" selected>Continuous Loop (Every 5s — Signal Loop)</option>
+                                <option value="15000">Every 15 Seconds</option>
+                                <option value="60000">Every 1 Minute</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block font-mono text-[10px] uppercase tracking-[0.12em] text-[#aebbb5] mb-2">
+                                Test Payload Volume
+                            </label>
+                            <select id="size-select" class="w-full bg-[#17201f] border border-[#60716a] px-3.5 py-3 font-mono text-xs text-[#f4f1e8] outline-none focus:border-[#ef745e]">
+                                <option value="standard" selected>Standard Profile (100KB–10MB Dynamic)</option>
+                                <option value="light">Lightweight Profile (Low Data Usage)</option>
+                                <option value="stress">High-Load Stress Profile (Up to 25MB)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                        <button id="start-btn" class="flex items-center justify-center gap-2 bg-[#ef745e] hover:bg-[#f4f1e8] text-[#17201f] border border-[#ef745e] px-4 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition">
+                            <i data-lucide="play" class="w-3.5 h-3.5"></i> Start Loop
+                        </button>
+                        <button id="stop-btn" disabled class="flex items-center justify-center gap-2 border border-[#ef745e] text-[#ef745e] hover:bg-[#ef745e] hover:text-[#17201f] px-4 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition disabled:opacity-30 disabled:cursor-not-allowed">
+                            <i data-lucide="square" class="w-3.5 h-3.5"></i> Stop Loop
+                        </button>
+                        <button id="single-btn" class="flex items-center justify-center gap-2 border border-[#8a9992] bg-[#17201f] text-[#f4f1e8] hover:border-[#ef745e] px-4 py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Run Single Test
+                        </button>
+                    </div>
+
+                    <div class="mt-6 border-l-2 border-[#ef745e] bg-[#17201f] p-3.5 font-mono text-[11px] leading-6 text-[#d2ded8]">
+                        <span class="text-[#ef745e]">PROTOCOL / </span>
+                        <span>Client requests run through unbuffered edge channels with zero disk logging.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Live Telemetry Section (Pale Mint #d9e9df) -->
+        <section id="telemetry" class="border-b border-[#17201f] bg-[#d9e9df] py-10">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-x border-[#17201f]">
+                <div class="flex flex-wrap items-end justify-between gap-4 border-b border-[#17201f] pb-4 mb-6">
+                    <div>
+                        <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-[#b33f29]">Live metrics desk</p>
+                        <h2 class="mt-1 text-3xl font-semibold tracking-[-0.06em]">Continuous telemetry.</h2>
+                    </div>
+                    <p class="font-mono text-[9px] uppercase leading-5 tracking-[0.1em] text-[#52605b] max-w-sm">
+                        Samples are direct edge calculations. Download and upload progress update in real time.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Metric: Ping -->
+                    <article class="border border-[#17201f] bg-[#f4f1e8] p-5 flex flex-col justify-between shadow-ink min-h-[175px]">
+                        <div>
+                            <div class="flex justify-between items-center font-mono text-[10px] uppercase tracking-[0.12em] text-[#b33f29]">
+                                <span>Edge Latency</span>
+                                <span id="ping-quality" class="border border-[#17201f] px-1.5 py-0.5 bg-[#f4f1e8] text-[#17201f]">Idle</span>
+                            </div>
+                            <div class="mt-3 flex items-baseline">
+                                <span id="metric-ping" class="text-4xl sm:text-5xl font-bold tracking-tight text-[#17201f]">0.0</span>
+                                <span class="font-mono text-xs text-[#52605b] ml-2">ms</span>
+                            </div>
+                        </div>
+                        <div class="border-t border-[#17201f] pt-2 font-mono text-[9px] uppercase tracking-[0.08em] text-[#52605b] flex justify-between">
+                            <span id="ping-status-text">Handshake / Ready</span>
+                            <span>RTT</span>
+                        </div>
+                    </article>
+
+                    <!-- Metric: Jitter -->
+                    <article class="border border-[#17201f] bg-[#f4f1e8] p-5 flex flex-col justify-between shadow-ink min-h-[175px]">
+                        <div>
+                            <div class="flex justify-between items-center font-mono text-[10px] uppercase tracking-[0.12em] text-[#b33f29]">
+                                <span>Signal Jitter</span>
+                                <span id="jitter-quality" class="border border-[#17201f] px-1.5 py-0.5 bg-[#f4f1e8] text-[#17201f]">Idle</span>
+                            </div>
+                            <div class="mt-3 flex items-baseline">
+                                <span id="metric-jitter" class="text-4xl sm:text-5xl font-bold tracking-tight text-[#17201f]">0.0</span>
+                                <span class="font-mono text-xs text-[#52605b] ml-2">ms</span>
+                            </div>
+                        </div>
+                        <div class="border-t border-[#17201f] pt-2 font-mono text-[9px] uppercase tracking-[0.08em] text-[#52605b] flex justify-between">
+                            <span id="jitter-status-text">Stability / RFC 3550</span>
+                            <span>Var</span>
+                        </div>
+                    </article>
+
+                    <!-- Metric: Download -->
+                    <article class="border border-[#17201f] bg-[#f4f1e8] p-5 flex flex-col justify-between shadow-ink min-h-[175px]">
+                        <div>
+                            <div class="flex justify-between items-center font-mono text-[10px] uppercase tracking-[0.12em] text-[#e84d31]">
+                                <span>Download Ingress</span>
+                                <span id="download-progress-text" class="text-[#52605b]">Ready</span>
+                            </div>
+                            <div class="mt-3 flex items-baseline">
+                                <span id="metric-download" class="text-4xl sm:text-5xl font-bold tracking-tight text-[#17201f]">0.00</span>
+                                <span class="font-mono text-xs text-[#52605b] ml-2">Mbps</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="w-full bg-[#d8ded7] border border-[#17201f] h-2 overflow-hidden mb-2">
+                                <div id="download-bar" class="bg-[#e84d31] h-full transition-all duration-200" style="width: 0%"></div>
+                            </div>
+                            <div class="font-mono text-[9px] uppercase tracking-[0.08em] text-[#52605b] flex justify-between">
+                                <span>Ingress stream</span>
+                                <span>Bandwidth</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Metric: Upload -->
+                    <article class="border border-[#17201f] bg-[#f4f1e8] p-5 flex flex-col justify-between shadow-ink min-h-[175px]">
+                        <div>
+                            <div class="flex justify-between items-center font-mono text-[10px] uppercase tracking-[0.12em] text-[#17201f]">
+                                <span>Upload Egress</span>
+                                <span id="upload-progress-text" class="text-[#52605b]">Ready</span>
+                            </div>
+                            <div class="mt-3 flex items-baseline">
+                                <span id="metric-upload" class="text-4xl sm:text-5xl font-bold tracking-tight text-[#17201f]">0.00</span>
+                                <span class="font-mono text-xs text-[#52605b] ml-2">Mbps</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="w-full bg-[#d8ded7] border border-[#17201f] h-2 overflow-hidden mb-2">
+                                <div id="upload-bar" class="bg-[#17201f] h-full transition-all duration-200" style="width: 0%"></div>
+                            </div>
+                            <div class="font-mono text-[9px] uppercase tracking-[0.08em] text-[#52605b] flex justify-between">
+                                <span>Egress stream</span>
+                                <span>Bandwidth</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Workspace Section -->
+        <section id="charts" class="border-b border-[#17201f] bg-[#f4f1e8] py-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-x border-[#17201f]">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Bandwidth Chart Card -->
+                    <div class="border border-[#17201f] bg-[#f4f1e8] p-6 shadow-ink">
+                        <div class="flex justify-between items-start border-b border-[#17201f] pb-3 mb-4">
+                            <div>
+                                <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-[#e84d31]">Throughput trace</p>
+                                <h3 class="text-xl font-bold tracking-[-0.04em]">Live Bandwidth (Mbps)</h3>
+                            </div>
+                            <div class="font-mono text-[10px] uppercase tracking-wider text-[#52605b]">
+                                <span>Download / Upload</span>
+                            </div>
+                        </div>
+                        <div class="h-[280px] w-full cut-grid border border-[#17201f] p-2">
+                            <canvas id="bandwidthChart" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Latency Chart Card -->
+                    <div class="border border-[#17201f] bg-[#f4f1e8] p-6 shadow-ink">
+                        <div class="flex justify-between items-start border-b border-[#17201f] pb-3 mb-4">
+                            <div>
+                                <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-[#b33f29]">Stability trace</p>
+                                <h3 class="text-xl font-bold tracking-[-0.04em]">Latency &amp; Jitter (ms)</h3>
+                            </div>
+                            <div class="font-mono text-[10px] uppercase tracking-wider text-[#52605b]">
+                                <span>Ping / Jitter</span>
+                            </div>
+                        </div>
+                        <div class="h-[280px] w-full cut-grid border border-[#17201f] p-2">
+                            <canvas id="latencyChart" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Session History Table -->
+        <section id="history" class="border-b border-[#17201f] bg-[#f4f1e8] py-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-x border-[#17201f]">
+                <div class="flex flex-wrap justify-between items-end gap-4 border-b border-[#17201f] pb-4 mb-6">
+                    <div>
+                        <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-[#e84d31]">Session memory</p>
+                        <h2 class="text-2xl sm:text-3xl font-bold tracking-tight">Telemetry Log.</h2>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <button id="export-csv-btn" onclick="exportCSV()" class="border border-[#17201f] bg-[#f4f1e8] hover:bg-[#17201f] hover:text-[#f4f1e8] px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition">
+                            Export CSV
+                        </button>
+                        <button id="export-json-btn" onclick="exportJSON()" class="border border-[#17201f] bg-[#f4f1e8] hover:bg-[#17201f] hover:text-[#f4f1e8] px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition">
+                            Export JSON
+                        </button>
+                        <button id="clear-btn" onclick="clearHistory()" class="border border-[#17201f] bg-[#e84d31] text-[#17201f] hover:bg-[#17201f] hover:text-[#f4f1e8] px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition">
+                            Clear Log
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border border-[#17201f] bg-[#f4f1e8] overflow-x-auto shadow-ink">
+                    <table class="w-full text-left border-collapse font-mono text-xs">
+                        <thead>
+                            <tr class="border-b border-[#17201f] bg-[#e9e5da] text-[10px] uppercase tracking-wider text-[#17201f]">
+                                <th class="py-3 px-4 border-r border-[#17201f]">Timestamp</th>
+                                <th class="py-3 px-4 border-r border-[#17201f]">Download</th>
+                                <th class="py-3 px-4 border-r border-[#17201f]">Upload</th>
+                                <th class="py-3 px-4 border-r border-[#17201f]">Ping</th>
+                                <th class="py-3 px-4 border-r border-[#17201f]">Jitter</th>
+                                <th class="py-3 px-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body" class="divide-y divide-[#17201f]/20">
+                            <tr>
+                                <td colspan="6" class="py-8 text-center text-[#52605b] font-normal uppercase tracking-wider">
+                                    No test history recorded yet. Start loop or run a single test.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Method Section (/ 03) -->
+        <section id="method" class="border-b border-[#17201f] bg-[#f4f1e8] py-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-x border-[#17201f]">
+                <div class="mb-10 grid gap-6 border-b border-[#17201f] pb-8 lg:grid-cols-[1fr_0.6fr] lg:items-end">
+                    <div>
+                        <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-[#e84d31]">Operational principles / 03</p>
+                        <h2 class="font-display mt-3 text-3xl sm:text-5xl font-semibold leading-[0.9] tracking-[-0.07em]">
+                            Not magic.<br />Just unbuffered measurement.
+                        </h2>
+                    </div>
+                    <p class="text-base leading-7 text-[#43504c]">
+                        Engineered for network administrators, stream engineers, and gamers who need unbuffered connection telemetry with zero analytics telemetry.
+                    </p>
+                </div>
+
+                <div class="grid border-l border-[#17201f] sm:grid-cols-3">
+                    <article class="border-b border-r border-[#17201f] p-6 sm:border-b-0">
+                        <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-[#e84d31]">01</p>
+                        <h3 class="mt-8 text-2xl font-semibold tracking-[-0.055em]">Direct Edge Streams</h3>
+                        <p class="mt-3 text-sm leading-6 text-[#52605b]">
+                            Tests stream directly through nearest Cloudflare CDN edge nodes with nonces to prevent browser HTTP proxy caching.
+                        </p>
+                    </article>
+
+                    <article class="border-b border-r border-[#17201f] p-6 sm:border-b-0">
+                        <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-[#e84d31]">02</p>
+                        <h3 class="mt-8 text-2xl font-semibold tracking-[-0.055em]">RFC 3550 Jitter</h3>
+                        <p class="mt-3 text-sm leading-6 text-[#52605b]">
+                            Jitter is computed via successive RTT variance. Unveils subtle connection packet jitter even when raw bandwidth numbers look high.
+                        </p>
+                    </article>
+
+                    <article class="border-b border-r border-[#17201f] p-6 sm:border-b-0">
+                        <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-[#e84d31]">03</p>
+                        <h3 class="mt-8 text-2xl font-semibold tracking-[-0.055em]">Zero Data Retention</h3>
+                        <p class="mt-3 text-sm leading-6 text-[#52605b]">
+                            Your test data lives only inside your browser memory (`localStorage`). No tracking beacons, no analytics databases, zero data selling.
+                        </p>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer in Signal Orange -->
+    <footer class="border-t border-[#17201f] bg-[#e84d31] text-[#17201f]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid gap-7 border-x border-[#17201f] py-8 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div>
+                <p class="text-xl font-bold tracking-[-0.055em]">netpulse pro</p>
+                <p class="mt-2 max-w-sm font-mono text-[9px] uppercase leading-5 tracking-[0.1em]">
+                    A continuous network diagnostic instrument for unbuffered throughput, latency, and jitter measurements.
+                </p>
+            </div>
+            <div class="grid grid-cols-2 gap-x-8 gap-y-2 font-mono text-[9px] uppercase tracking-[0.1em] sm:text-right">
+                <a class="hover:underline" href="privacy.html">Privacy</a>
+                <a class="hover:underline" href="terms.html">Terms</a>
+                <a class="hover:underline" href="https://github.com/theneotic/netpulse-pro" target="_blank" rel="noopener noreferrer">Source</a>
+                <a class="hover:underline" href="#top">Top &uarr;</a>
+            </div>
+            <div class="border-t border-[#17201f] pt-3 font-mono text-[9px] uppercase tracking-[0.1em] sm:col-span-2 sm:flex sm:justify-between">
+                <p>&copy; 2026 NetPulse Pro. All rights reserved.</p>
+                <p class="mt-2 sm:mt-0">Open-source telemetry utility &middot; Zero tracking</p>
+            </div>
+        </div>
+    </footer>
 
     <!-- Initialize Lucide Icons -->
     <script>
         lucide.createIcons();
     </script>
     <!-- Main Script -->
-    <script src="script.js?v=3.1.0"></script>
+    <script src="script.js?v=3.2.0"></script>
 </body>
 
 </html>
