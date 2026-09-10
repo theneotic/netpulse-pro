@@ -96,11 +96,11 @@
                     <div class="relative">
                         <select id="interval-select"
                             class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 appearance-none font-medium text-sm">
+                            <option value="2000">Continuous Fast (Every 2s)</option>
+                            <option value="5000" selected>Continuous Loop (Every 5s — Signal Loop)</option>
+                            <option value="15000">Every 15 Seconds</option>
                             <option value="60000">Every 1 Minute</option>
-                            <option value="300000" selected>Every 5 Minutes</option>
-                            <option value="900000">Every 15 Minutes</option>
-                            <option value="1800000">Every 30 Minutes</option>
-                            <option value="3600000">Every 1 Hour</option>
+                            <option value="300000">Every 5 Minutes</option>
                         </select>
                         <div class="absolute right-3 top-3.5 pointer-events-none text-slate-400">
                             <i data-lucide="chevron-down" class="w-4 h-4"></i>
@@ -113,9 +113,9 @@
                     <div class="relative">
                         <select id="size-select"
                             class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 appearance-none font-medium text-sm">
-                            <option value="1">Light (~2 MB)</option>
-                            <option value="5" selected>Standard (~10 MB)</option>
-                            <option value="15">Heavy (~30 MB)</option>
+                            <option value="1" selected>Signal Loop (~256 KB DL / 128 KB UL)</option>
+                            <option value="5">Standard (~1 MB DL / 512 KB UL)</option>
+                            <option value="15">High Stress (~4 MB DL / 2 MB UL)</option>
                         </select>
                         <div class="absolute right-3 top-3.5 pointer-events-none text-slate-400">
                             <i data-lucide="chevron-down" class="w-4 h-4"></i>
@@ -335,7 +335,7 @@
         lucide.createIcons();
     </script>
     <!-- Main Script -->
-    <script src="script.js?v=2.0.1"></script>
+    <script src="script.js?v=3.0.0"></script>
 </body>
 
 </html>

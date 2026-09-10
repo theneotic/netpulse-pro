@@ -29,42 +29,54 @@ const TRACE_ENDPOINT = CF_BASE + '/cdn-cgi/trace';
 
 const HISTORY_KEY = 'netpulse_history';
 const INTERVAL_KEY = 'netpulse_interval';
+const SIZE_KEY = 'netpulse_size';
 const HISTORY_LIMIT = 500;
 
+const KB = 1024;
 const MB = 1024 * 1024;
-const DOWNLOAD_STAGES = [2 * MB, 10 * MB, 25 * MB, 50 * MB];
-const UPLOAD_STAGES = [1 * MB, 2 * MB, 5 * MB, 10 * MB, 20 * MB];
-// Fallbacks attempted only when the smallest regular stage can't complete
-// (e.g. very slow links or heavy congestion).
-const SLOW_DOWNLOAD_STAGES = [256 * 1024, 512 * 1024, 1024 * 1024];
-const SLOW_UPLOAD_STAGES = [64 * 1024, 128 * 1024, 256 * 1024];
-// size-select value -> highest stage index to attempt
-const DL_STAGE_INDEX = { '1': 0, '5': 2, '15': 3 };
-const UP_STAGE_INDEX = { '1': 0, '5': 2, '15': 4 };
 
-const PING_SAMPLES = 8;
-const UPLOAD_ATTEMPTS = 2;
-const MIN_STAGE_SECONDS = 1.5; // keep sizing up until a stage runs at least this long
-const PING_TIMEOUT_MS = 5000;
-const DOWNLOAD_TIMEOUT_MS = 45000;
-const UPLOAD_TIMEOUT_MS = 60000;
-const SLOW_FLOOR_TIMEOUT_MS = 8000;
+// Signal-Loop style fast & honest payloads
+const DOWNLOAD_SIZES = {
+    '1': 256 * KB,      // Signal Loop Fast (256 KB)
+    '5': 1024 * KB,     // Standard (1 MB)
+    '15': 4 * MB        // High Load Stress (4 MB)
+};
+
+const UPLOAD_SIZES = {
+    '1': 128 * KB,      // Signal Loop Fast (128 KB)
+    '5': 512 * KB,      // Standard (512 KB)
+    '15': 2 * MB        // High Load Stress (2 MB)
+};
+
+const PING_SAMPLES = 4;
+const PING_TIMEOUT_MS = 4000;
+const DOWNLOAD_TIMEOUT_MS = 15000;
+const UPLOAD_TIMEOUT_MS = 15000;
 
 /* ------------------------------- Global state ----------------------------- */
 let isMonitoring = false;
 let monitorTimerId = null;
-let pendingTick = false;   // scheduled tick fired while a test was already running
-let nextRunAt = null;      // epoch ms of the next scheduled test (for countdown)
 let countdownTimerId = null;
+let nextRunAt = null;
 let isTesting = false;
+let activeAbortController = null;
 let lastServerLabel = null;
+
+let peakDownload = 0;
+let peakUpload = 0;
 
 let testHistory = [];
 try {
     if (typeof localStorage !== 'undefined') {
         const raw = localStorage.getItem(HISTORY_KEY) || '[]';
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) testHistory = parsed;
+        if (Array.isArray(parsed)) {
+            testHistory = parsed;
+            testHistory.forEach(h => {
+                if (h.download && h.download > peakDownload) peakDownload = h.download;
+                if (h.upload && h.upload > peakUpload) peakUpload = h.upload;
+            });
+        }
     }
 } catch (e) {
     testHistory = [];
@@ -89,7 +101,7 @@ function formatMs(ms) {
 function round2(v) { return Math.round(v * 100) / 100; }
 function round1(v) { return Math.round(v * 10) / 10; }
 
-/** Random hex nonce for cache-busting speed-test URLs. */
+/** Random hex nonce for cache-busting speed-test URLs (no Math.random). */
 function nonce() {
     const buf = new Uint8Array(8);
     window.crypto.getRandomValues(buf);
@@ -97,6 +109,7 @@ function nonce() {
 }
 
 function median(values) {
+    if (!values || values.length === 0) return 0;
     const sorted = values.slice().sort((a, b) => a - b);
     const mid = sorted.length / 2;
     return mid % 1 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[Math.floor(mid)];
@@ -104,29 +117,23 @@ function median(values) {
 
 /** RFC 3550-style jitter: mean absolute difference of successive RTT samples. */
 function meanAbsDiff(values) {
+    if (!values || values.length < 2) return 0;
     let sum = 0;
     for (let i = 1; i < values.length; i++) sum += Math.abs(values[i] - values[i - 1]);
-    return values.length > 1 ? sum / (values.length - 1) : 0;
+    return sum / (values.length - 1);
 }
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * Per-stage timeout sized so even 0.3 Mbps links have time to complete a
- * first-stage payload, clamped between floorMs and capMs.
- */
-function stageTimeoutMs(bytes, floorMs, capMs) {
-    const minRate = 300000; // bits per second tolerated on small payloads
-    return Math.min(capMs, Math.max(floorMs, Math.ceil((bytes * 8) / minRate)));
-}
-
-/** fetch() that hard-aborts after timeoutMs (AbortSignal.timeout, Chrome 108+). */
+/** fetch() with timeout support via AbortSignal. */
 function fetchWithTimeout(url, options, timeoutMs) {
     const opts = options || {};
-    if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
-        opts.signal = AbortSignal.timeout(timeoutMs);
+    if (!opts.signal) {
+        if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+            opts.signal = AbortSignal.timeout(timeoutMs || 15000);
+        }
     }
     return fetch(url, opts);
 }
@@ -153,30 +160,41 @@ function escapeHtml(value) {
 }
 
 function setStatus(text, dotColor) {
-    $('status-text').textContent = text;
+    const statusEl = $('status-text');
     const dot = $('status-dot');
-    dot.className = 'w-2.5 h-2.5 rounded-full ' + dotColor + ' animate-pulse';
+    if (statusEl) statusEl.textContent = text;
+    if (dot) dot.className = 'w-2.5 h-2.5 rounded-full ' + dotColor + ' animate-pulse';
 }
 
 /* ------------------------------- Bootstrap -------------------------------- */
 if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', () => {
-        restoreSavedInterval();
+        restoreSavedConfig();
         initCharts();
         renderHistoryTable();
         updateUIState();
     });
 }
 
-function restoreSavedInterval() {
-    const sel = $('interval-select');
-    if (!sel) return;
-    try {
-        const saved = localStorage.getItem(INTERVAL_KEY);
-        if (saved && Array.prototype.some.call(sel.options, o => o.value === saved)) {
-            sel.value = saved;
-        }
-    } catch (e) { /* storage unavailable — keep defaults */ }
+function restoreSavedConfig() {
+    const intervalSel = $('interval-select');
+    if (intervalSel) {
+        try {
+            const saved = localStorage.getItem(INTERVAL_KEY);
+            if (saved && Array.prototype.some.call(intervalSel.options, o => o.value === saved)) {
+                intervalSel.value = saved;
+            }
+        } catch (e) { /* storage unavailable */ }
+    }
+    const sizeSel = $('size-select');
+    if (sizeSel) {
+        try {
+            const savedSize = localStorage.getItem(SIZE_KEY);
+            if (savedSize && Array.prototype.some.call(sizeSel.options, o => o.value === savedSize)) {
+                sizeSel.value = savedSize;
+            }
+        } catch (e) { /* storage unavailable */ }
+    }
 }
 
 /* ============================ Measurement engine ========================== */
@@ -186,8 +204,6 @@ function readServerInfo(res) {
     const g = h => {
         try { return res.headers.get(h); } catch (e) { return null; }
     };
-    // Try the cf-meta aliases first, then the plain names. In CORS-filtered
-    // browsers only cf-meta-* may be readable; the trace fallback covers that.
     const city = g('cf-meta-city') || g('city');
     const country = g('cf-meta-country') || g('country');
     const colo = g('cf-meta-colo') || g('colo');
@@ -204,15 +220,13 @@ function buildServerInfo(city, country, colo, asn, ip) {
     return { city, country, colo, asn, ip, label };
 }
 
-/**
- * Fallback source of node info: GET https://speed.cloudflare.com/cdn-cgi/trace
- * (CORS `*`, plain text). Body lines look like: ip=… loc=IN colo=BOM …
- */
-async function fetchServerInfoFallback() {
+/** Fallback source of node info: GET https://speed.cloudflare.com/cdn-cgi/trace */
+async function fetchServerInfoFallback(signal) {
     try {
         const res = await fetchWithTimeout(TRACE_ENDPOINT, {
             method: 'GET',
-            cache: 'no-store'
+            cache: 'no-store',
+            signal
         }, PING_TIMEOUT_MS);
         const text = await res.text();
         const fields = {};
@@ -229,19 +243,20 @@ async function fetchServerInfoFallback() {
 function updateServerBadge(info) {
     if (!info) return;
     lastServerLabel = info.label;
-    $('server-location-text').textContent = info.label;
+    const locText = $('server-location-text');
+    if (locText) locText.textContent = info.label;
     const badge = $('connection-badge');
-    badge.classList.remove('hidden');
-    badge.classList.add('flex');
+    if (badge) {
+        badge.classList.remove('hidden');
+        badge.classList.add('flex');
+    }
 }
 
 /**
- * Ping & jitter: PING_SAMPLES sequential GETs of an empty payload against the
- * Cloudflare edge. RTT = median, jitter = mean abs successive diff (RFC 3550).
- * No fallback values — throws if every probe fails. Also captures the first
- * response's geo metadata for the location badge.
+ * Ping & jitter: rapid sequential GETs of an empty payload against Cloudflare edge.
+ * RTT = median, jitter = RFC 3550 successive diff.
  */
-async function measurePingAndJitter() {
+async function measurePingAndJitter(signal) {
     const rtts = [];
     let serverInfo = null;
 
@@ -251,217 +266,154 @@ async function measurePingAndJitter() {
         try {
             const res = await fetchWithTimeout(url, {
                 method: 'GET',
-                cache: 'no-store'
-                // Note: no custom headers — Cache-Control request header triggers a CORS
-                // preflight that Cloudflare's /__down endpoint rejects. Cache busting is
-                // already handled by the &cb=nonce query param.
+                cache: 'no-store',
+                signal
             }, PING_TIMEOUT_MS);
-            await res.arrayBuffer(); // drain (empty) payload so RTT covers the full round trip
+            await res.arrayBuffer();
             rtts.push(performance.now() - startedAt);
             if (i === 0) serverInfo = readServerInfo(res);
         } catch (e) {
-            // sample failed — skipped, never fabricated
+            if (e.name === 'AbortError') throw e;
         }
-        if (i < PING_SAMPLES - 1) await sleep(120);
+        if (i < PING_SAMPLES - 1) await sleep(25);
     }
 
     if (rtts.length === 0) {
         throw new Error('Ping measurement failed: no reachable endpoint');
     }
 
-    // In CORS-filtered browsers the cf-meta headers do not carry city/colo —
-    // fall back to the always-readable cdn-cgi/trace body.
-    if (!serverInfo) serverInfo = await fetchServerInfoFallback();
+    if (!serverInfo) serverInfo = await fetchServerInfoFallback(signal);
 
     return { ping: median(rtts), jitter: meanAbsDiff(rtts), serverInfo };
 }
 
-function downloadStagesFor(profile) {
-    const idx = DL_STAGE_INDEX[String(profile)];
-    return DOWNLOAD_STAGES.slice(0, (idx == null ? DL_STAGE_INDEX['5'] : idx) + 1);
-}
-
-/** Stream a single ?bytes=N payload, counting decoded bytes vs elapsed time. */
-async function measureDownloadOnce(bytes, onLive, timeoutMs) {
+/**
+ * Download sample (Signal-Loop approach):
+ * Fetches bytes payload directly into arrayBuffer for instant, non-blocking,
+ * 100% reliable throughput calculation.
+ */
+async function measureDownloadOnce(bytes, onLive, timeoutMs, signal) {
     const url = DOWNLOAD_ENDPOINT + '?bytes=' + bytes + '&cb=' + nonce();
     const startedAt = performance.now();
-    let totalBytes = 0;
 
     try {
         const res = await fetchWithTimeout(url, {
             method: 'GET',
-            cache: 'no-store'
+            cache: 'no-store',
+            signal
         }, timeoutMs || DOWNLOAD_TIMEOUT_MS);
-        if (!res.ok) {
-            console.warn('Download HTTP response not OK:', res.status, res.statusText);
-            return null;
-        }
+        if (!res.ok) return null;
 
-        if (res.body && typeof res.body.getReader === 'function') {
-            try {
-                const reader = res.body.getReader();
-                for (;;) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    totalBytes += value.length;
-                    if (typeof onLive === 'function') {
-                        const sec = (performance.now() - startedAt) / 1000;
-                        if (sec > 0) onLive((totalBytes * 8) / (sec * 1e6));
-                    }
-                }
-            } catch (streamErr) {
-                console.warn('Stream reader interrupted, draining via blob:', streamErr);
-            }
-        }
-        
-        // Fallback if reader didn't collect bytes (or wasn't supported)
-        if (totalBytes === 0) {
-            const blob = await res.blob();
-            totalBytes = blob.size;
-        }
+        const buf = await res.arrayBuffer();
+        const totalBytes = buf.byteLength;
+        const durationSec = (performance.now() - startedAt) / 1000;
+        if (durationSec <= 0 || totalBytes === 0) return null;
+
+        const mbps = (totalBytes * 8) / (durationSec * 1e6);
+        if (typeof onLive === 'function') onLive(mbps);
+        return mbps;
     } catch (e) {
-        console.error('measureDownloadOnce network/CORS error on ' + url + ':', e);
+        if (e.name === 'AbortError') throw e;
+        console.error('measureDownloadOnce error:', e);
         return null;
     }
-
-    const durationSec = (performance.now() - startedAt) / 1000;
-    if (durationSec <= 0 || totalBytes === 0) return null;
-    return (totalBytes * 8) / (durationSec * 1e6);
 }
 
 /**
- * Download: grow payloads until a stage runs >= MIN_STAGE_SECONDS. Accurate on
- * anything from ~0.3 Mbps (falls back to tiny probes) up to gigabit lines.
+ * Download speed with fallback for slow links.
  */
-async function measureDownloadSpeed(profile, onLive) {
-    const stages = downloadStagesFor(profile);
-    let lastBest = 0;
+async function measureDownloadSpeed(profile, onLive, signal) {
+    const size = DOWNLOAD_SIZES[String(profile)] || (256 * KB);
+    let mbps = await measureDownloadOnce(size, onLive, DOWNLOAD_TIMEOUT_MS, signal);
 
-    for (let i = 0; i < stages.length; i++) {
-        const size = stages[i];
-        const mbps = await measureDownloadOnce(size, onLive, stageTimeoutMs(size, SLOW_FLOOR_TIMEOUT_MS, DOWNLOAD_TIMEOUT_MS));
-        if (mbps != null) {
-            lastBest = mbps;
-            const elapsedSec = (size * 8) / 1e6 / mbps;
-            if (elapsedSec >= MIN_STAGE_SECONDS || i === stages.length - 1) break;
-        } else if (i === 0) {
-            // Regular stage aborted — try the slow-link fallbacks.
-            for (let s = 0; s < SLOW_DOWNLOAD_STAGES.length; s++) {
-                const slow = await measureDownloadOnce(SLOW_DOWNLOAD_STAGES[s], onLive, stageTimeoutMs(SLOW_DOWNLOAD_STAGES[s], SLOW_FLOOR_TIMEOUT_MS, DOWNLOAD_TIMEOUT_MS));
-                if (slow != null) return slow;
-            }
-            throw new Error('Download measurement failed');
-        }
+    if (mbps == null) {
+        // Fallback retry with smaller 64 KB probe
+        mbps = await measureDownloadOnce(64 * KB, onLive, 6000, signal);
     }
 
-    return lastBest;
-}
+    if (mbps == null) {
+        throw new Error('Download measurement failed');
+    }
 
-function uploadStagesFor(profile) {
-    const idx = UP_STAGE_INDEX[String(profile)];
-    return UPLOAD_STAGES.slice(0, (idx == null ? UP_STAGE_INDEX['5'] : idx) + 1);
+    return mbps;
 }
 
 /** Build a Blob of `bytes` from a 1 MB random seed (cheap, high entropy). */
 function buildBlob(bytes, seed) {
-    if (bytes <= seed.length) {
-        return new Blob([seed.subarray(0, bytes)], { type: 'application/octet-stream' });
+    const s = seed || new Uint8Array(Math.min(bytes, 65536));
+    if (!seed) window.crypto.getRandomValues(s);
+    if (bytes <= s.length) {
+        return new Blob([s.subarray(0, bytes)], { type: 'application/octet-stream' });
     }
-    const parts = new Array(Math.ceil(bytes / seed.length)).fill(seed);
+    const parts = new Array(Math.ceil(bytes / s.length)).fill(s);
     return new Blob(parts, { type: 'application/octet-stream' });
 }
 
-async function measureUploadOnce(bytes, seed, timeoutMs) {
+async function measureUploadOnce(bytes, seed, timeoutMs, signal) {
     const blob = buildBlob(bytes, seed);
     const startedAt = performance.now();
 
     try {
-        const res = await fetchWithTimeout(UPLOAD_ENDPOINT, {
+        const res = await fetchWithTimeout(UPLOAD_ENDPOINT + '?cb=' + nonce(), {
             method: 'POST',
             body: blob,
-            headers: { 'Content-Type': 'application/octet-stream' }
+            cache: 'no-store',
+            headers: { 'Content-Type': 'application/octet-stream' },
+            signal
         }, timeoutMs || UPLOAD_TIMEOUT_MS);
         if (!res.ok) return null;
+
+        const durationSec = (performance.now() - startedAt) / 1000;
+        if (durationSec <= 0) return null;
+        return (bytes * 8) / (durationSec * 1e6);
     } catch (e) {
+        if (e.name === 'AbortError') throw e;
+        console.error('measureUploadOnce error:', e);
         return null;
     }
-
-    const durationSec = (performance.now() - startedAt) / 1000;
-    if (durationSec <= 0) return null;
-    return (bytes * 8) / (durationSec * 1e6);
 }
 
 /**
- * Upload: two attempts per stage (keep the best) with adaptive sizing, plus a
- * slow-link fallback when even the smallest regular payload can't complete.
- * Note: fetch() exposes no upload progress events, so no live ticker here.
+ * Upload speed with high-entropy binary payload.
  */
-async function measureUploadSpeed(profile) {
-    const stages = uploadStagesFor(profile);
-    // One high-entropy seed per cycle; replicated across stages.
-    // Fill in 64 KB chunks — crypto.getRandomValues() is limited to 65536 bytes per call.
-    const seed = new Uint8Array(1024 * 1024);
-    for (let offset = 0; offset < seed.length; offset += 65536) {
-        window.crypto.getRandomValues(seed.subarray(offset, offset + 65536));
+async function measureUploadSpeed(profile, signal) {
+    const size = UPLOAD_SIZES[String(profile)] || (128 * KB);
+    const seed = new Uint8Array(Math.min(size, 65536));
+    window.crypto.getRandomValues(seed);
+
+    let mbps = await measureUploadOnce(size, seed, UPLOAD_TIMEOUT_MS, signal);
+
+    if (mbps == null) {
+        // Fallback retry with smaller 32 KB probe
+        mbps = await measureUploadOnce(32 * KB, seed, 6000, signal);
     }
 
-    let lastBest = 0;
-
-    for (let i = 0; i < stages.length; i++) {
-        const size = stages[i];
-        let stageBest = 0;
-        for (let a = 0; a < UPLOAD_ATTEMPTS; a++) {
-            const mbps = await measureUploadOnce(size, seed, stageTimeoutMs(size, SLOW_FLOOR_TIMEOUT_MS, UPLOAD_TIMEOUT_MS));
-            if (mbps != null) {
-                stageBest = Math.max(stageBest, mbps);
-            }
-        }
-        if (stageBest > 0) {
-            lastBest = stageBest;
-            const elapsedSec = (size * 8) / 1e6 / stageBest;
-            if (elapsedSec >= MIN_STAGE_SECONDS || i === stages.length - 1) break;
-        } else if (i === 0) {
-            break; // smallest regular stage failed — fall through to slow probes
-        }
-    }
-
-    if (lastBest <= 0) {
-        // No regular stage succeeded — slow-link fallback: 2 attempts on each tiny payload.
-        for (let s = 0; s < SLOW_UPLOAD_STAGES.length; s++) {
-            let best = 0;
-            for (let a = 0; a < UPLOAD_ATTEMPTS; a++) {
-                const mbps = await measureUploadOnce(SLOW_UPLOAD_STAGES[s], seed, stageTimeoutMs(SLOW_UPLOAD_STAGES[s], SLOW_FLOOR_TIMEOUT_MS, UPLOAD_TIMEOUT_MS));
-                if (mbps != null) best = Math.max(best, mbps);
-            }
-            if (best > 0) return best;
-        }
+    if (mbps == null) {
         throw new Error('Upload measurement failed');
     }
 
-    return lastBest;
+    return mbps;
 }
 
-/* ====================== Continuous monitoring lifecycle ==================== */
+/* ============================ Continuous Monitoring Loop =================== */
 
 function startMonitoring() {
     if (isMonitoring) return;
     isMonitoring = true;
-    pendingTick = false;
     updateUIState();
-    setStatus('Monitoring Active', 'bg-emerald-500');
-    const cd = $('countdown-text');
-    if (cd) cd.classList.remove('hidden');
-    runSingleTest(); // first cycle immediately; runSingleTest chains the next tick
+    runContinuousLoop();
 }
 
 function stopMonitoring() {
-    if (!isMonitoring) return;
     isMonitoring = false;
-    pendingTick = false;
     stopCountdown();
     if (monitorTimerId) {
         clearTimeout(monitorTimerId);
         monitorTimerId = null;
+    }
+    if (activeAbortController) {
+        try { activeAbortController.abort(); } catch (e) { /* noop */ }
+        activeAbortController = null;
     }
     updateUIState();
     setStatus('System Idle', 'bg-slate-500');
@@ -469,29 +421,33 @@ function stopMonitoring() {
     if (cd) cd.classList.add('hidden');
 }
 
-/** Drift-free chain: the next tick is scheduled only after the current test ends. */
-function scheduleNextTest() {
-    if (!isMonitoring) return;
-    const intervalMs = parseInt($('interval-select').value);
-    try { localStorage.setItem(INTERVAL_KEY, String(intervalMs)); } catch (e) { /* quota */ }
-    nextRunAt = Date.now() + intervalMs;
-    monitorTimerId = setTimeout(onScheduledTick, intervalMs);
-    startCountdown();
-}
+/**
+ * Signal-Loop Continuous runner: runs consecutive test samples separated by
+ * the selected cadence until stopped.
+ */
+async function runContinuousLoop() {
+    while (isMonitoring) {
+        await runSingleTest();
+        if (!isMonitoring) break;
 
-function onScheduledTick() {
-    if (!isMonitoring) return;
-    if (isTesting) {
-        // A test is still running — queue it; runSingleTest drains the queue.
-        pendingTick = true;
-        return;
+        const intervalSel = $('interval-select');
+        const intervalMs = intervalSel ? (parseInt(intervalSel.value) || 5000) : 5000;
+        try { localStorage.setItem(INTERVAL_KEY, String(intervalMs)); } catch (e) { /* quota */ }
+
+        nextRunAt = Date.now() + intervalMs;
+        startCountdown();
+
+        // Sleep until next cycle or until stopped
+        await sleep(intervalMs);
+        stopCountdown();
     }
-    runSingleTest();
 }
 
 function startCountdown() {
     stopCountdown();
-    countdownTimerId = setInterval(updateCountdown, 500);
+    const cd = $('countdown-text');
+    if (cd) cd.classList.remove('hidden');
+    countdownTimerId = setInterval(updateCountdown, 250);
     updateCountdown();
 }
 
@@ -512,32 +468,41 @@ function updateCountdown() {
     }
     const remainMs = Math.max(0, nextRunAt - Date.now());
     if (remainMs <= 0) {
-        el.textContent = 'Starting next test…';
+        el.textContent = 'Sampling next cycle…';
         return;
     }
-    const totalSec = Math.ceil(remainMs / 1000);
-    const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
-    const ss = String(totalSec % 60).padStart(2, '0');
-    el.textContent = 'Next test in ' + mm + ':' + ss;
+    const sec = (remainMs / 1000).toFixed(1);
+    el.textContent = `Continuous mode: next sample in ${sec}s…`;
 }
 
 function updateUIState() {
     const startBtn = $('start-btn');
     const stopBtn = $('stop-btn');
     const intervalSelect = $('interval-select');
+    const sizeSelect = $('size-select');
 
     if (isMonitoring) {
-        startBtn.disabled = true;
-        startBtn.className = 'flex-1 bg-indigo-950/60 text-indigo-400 cursor-not-allowed font-semibold py-3 px-4 rounded-xl transition border border-indigo-900/50 flex items-center justify-center space-x-2 text-sm';
-        stopBtn.disabled = false;
-        stopBtn.className = 'flex-1 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-rose-600/30 flex items-center justify-center space-x-2 text-sm';
-        intervalSelect.disabled = true;
+        if (startBtn) {
+            startBtn.disabled = true;
+            startBtn.className = 'flex-1 bg-indigo-950/60 text-indigo-400 cursor-not-allowed font-semibold py-3 px-4 rounded-xl transition border border-indigo-900/50 flex items-center justify-center space-x-2 text-sm';
+        }
+        if (stopBtn) {
+            stopBtn.disabled = false;
+            stopBtn.className = 'flex-1 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-rose-600/30 flex items-center justify-center space-x-2 text-sm';
+        }
+        if (intervalSelect) intervalSelect.disabled = true;
+        if (sizeSelect) sizeSelect.disabled = true;
     } else {
-        startBtn.disabled = false;
-        startBtn.className = 'flex-1 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 text-sm';
-        stopBtn.disabled = true;
-        stopBtn.className = 'flex-1 bg-slate-800/80 text-slate-500 cursor-not-allowed font-semibold py-3 px-4 rounded-xl transition border border-slate-700/50 flex items-center justify-center space-x-2 text-sm';
-        intervalSelect.disabled = false;
+        if (startBtn) {
+            startBtn.disabled = false;
+            startBtn.className = 'flex-1 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 text-sm';
+        }
+        if (stopBtn) {
+            stopBtn.disabled = true;
+            stopBtn.className = 'flex-1 bg-slate-800/80 text-slate-500 cursor-not-allowed font-semibold py-3 px-4 rounded-xl transition border border-slate-700/50 flex items-center justify-center space-x-2 text-sm';
+        }
+        if (intervalSelect) intervalSelect.disabled = false;
+        if (sizeSelect) sizeSelect.disabled = false;
     }
 }
 
@@ -546,126 +511,149 @@ function updateUIState() {
 async function runSingleTest() {
     if (isTesting) return;
     isTesting = true;
-    $('single-btn').disabled = true;
+    activeAbortController = new AbortController();
+    const signal = activeAbortController.signal;
+
+    const singleBtn = $('single-btn');
+    if (singleBtn) singleBtn.disabled = true;
     nextRunAt = null;
-    setStatus('Running Diagnostics…', 'bg-amber-500');
+    setStatus(isMonitoring ? 'Continuous Sampling Active' : 'Running Diagnostic…', 'bg-emerald-500');
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const dateStr = now.toLocaleDateString() + ' ' + timeStr;
-    const profile = $('size-select').value;
+    const sizeSel = $('size-select');
+    const profile = sizeSel ? sizeSel.value : '1';
 
     let ping = null;
     let jitter = null;
     let download = null;
     let upload = null;
 
-    // ---- 1. Ping & jitter -------------------------------------------------
-    $('ping-status-text').textContent = 'Measuring…';
     try {
-        const r = await measurePingAndJitter();
-        ping = r.ping;
-        jitter = r.jitter;
-        if (r.serverInfo) updateServerBadge(r.serverInfo);
+        // ---- 1. Ping & jitter -------------------------------------------------
+        const pingStatus = $('ping-status-text');
+        if (pingStatus) pingStatus.textContent = 'Measuring…';
+        try {
+            const r = await measurePingAndJitter(signal);
+            ping = r.ping;
+            jitter = r.jitter;
+            if (r.serverInfo) updateServerBadge(r.serverInfo);
 
-        $('metric-ping').textContent = formatMs(ping);
-        $('metric-jitter').textContent = formatMs(jitter);
+            const mPing = $('metric-ping');
+            const mJitter = $('metric-jitter');
+            if (mPing) mPing.textContent = formatMs(ping);
+            if (mJitter) mJitter.textContent = formatMs(jitter);
 
-        const pq = pingQuality(ping);
-        $('ping-quality').textContent = pq.label;
-        $('ping-quality').className = 'text-' + pq.color + '-400 font-semibold';
-        $('ping-status-text').textContent = 'Stable';
+            const pq = pingQuality(ping);
+            const pQuality = $('ping-quality');
+            if (pQuality) {
+                pQuality.textContent = pq.label;
+                pQuality.className = 'text-' + pq.color + '-400 font-semibold';
+            }
+            if (pingStatus) pingStatus.textContent = 'Stable';
 
-        const jq = jitterQuality(jitter);
-        $('jitter-quality').textContent = jq.label;
-        $('jitter-quality').className = 'text-' + jq.color + '-400 font-semibold';
-        $('jitter-status-text').textContent = 'Variance OK';
-    } catch (e) {
-        console.error('Ping failed:', e);
-        $('metric-ping').textContent = '—';
-        $('metric-jitter').textContent = '—';
-        $('ping-status-text').textContent = 'Unreachable';
-        $('ping-quality').textContent = 'Failed';
-        $('ping-quality').className = 'text-rose-400 font-semibold';
-        $('jitter-status-text').textContent = 'Unavailable';
-        $('jitter-quality').textContent = 'Failed';
-        $('jitter-quality').className = 'text-rose-400 font-semibold';
-    }
-
-    // ---- 2. Download ------------------------------------------------------
-    $('download-progress-text').textContent = 'Connecting…';
-    $('download-bar').style.width = '0%';
-    try {
-        download = await measureDownloadSpeed(profile, live => {
-            $('download-progress-text').textContent = 'Streaming — ' + live.toFixed(1) + ' Mbps';
-        });
-        $('metric-download').textContent = formatMbps(download);
-        $('download-progress-text').textContent = 'Completed';
-        $('download-bar').style.width = '100%';
-    } catch (e) {
-        console.error('Download failed:', e);
-        $('metric-download').textContent = '—';
-        $('download-progress-text').textContent = 'Failed';
-        $('download-bar').style.width = '0%';
-    }
-
-    // ---- 3. Upload --------------------------------------------------------
-    $('upload-progress-text').textContent = 'Uploading payload…';
-    $('upload-bar').style.width = '0%';
-    try {
-        upload = await measureUploadSpeed(profile);
-        $('metric-upload').textContent = formatMbps(upload);
-        $('upload-progress-text').textContent = 'Completed';
-        $('upload-bar').style.width = '100%';
-    } catch (e) {
-        console.error('Upload failed:', e);
-        $('metric-upload').textContent = '—';
-        $('upload-progress-text').textContent = 'Failed';
-        $('upload-bar').style.width = '0%';
-    }
-
-    // ---- Record (honest: nulls for failed phases) --------------------------
-    const allOk = ping != null && download != null && upload != null;
-    const anyOk = ping != null || download != null || upload != null;
-    const record = {
-        timestamp: dateStr,
-        time: timeStr,
-        download: download == null ? null : round2(download),
-        upload: upload == null ? null : round2(upload),
-        ping: ping == null ? null : round1(ping),
-        jitter: jitter == null ? null : round1(jitter),
-        status: allOk ? 'Success' : (anyOk ? 'Partial' : 'Failed'),
-        server: lastServerLabel || null
-    };
-
-    testHistory.push(record);
-    if (testHistory.length > HISTORY_LIMIT) testHistory = testHistory.slice(-HISTORY_LIMIT);
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(testHistory)); } catch (e) { /* quota */ }
-
-    renderHistoryTable();
-    updateChartsFromHistory();
-
-    isTesting = false;
-    $('single-btn').disabled = false;
-    setStatus(isMonitoring ? 'Monitoring Active' : 'System Idle',
-        isMonitoring ? 'bg-emerald-500' : 'bg-slate-500');
-
-    // Reset progress bars shortly after displaying the final state.
-    setTimeout(() => {
-        if (!isTesting) {
-            $('download-bar').style.width = '0%';
-            $('upload-bar').style.width = '0%';
+            const jq = jitterQuality(jitter);
+            const jQuality = $('jitter-quality');
+            const jStatus = $('jitter-status-text');
+            if (jQuality) {
+                jQuality.textContent = jq.label;
+                jQuality.className = 'text-' + jq.color + '-400 font-semibold';
+            }
+            if (jStatus) jStatus.textContent = 'Variance OK';
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+            console.error('Ping failed:', e);
+            const mPing = $('metric-ping');
+            const mJitter = $('metric-jitter');
+            if (mPing) mPing.textContent = '—';
+            if (mJitter) mJitter.textContent = '—';
+            if (pingStatus) pingStatus.textContent = 'Unreachable';
         }
-    }, 2000);
 
-    // Chain the next scheduled test if monitoring (drains a queued tick too).
-    if (isMonitoring) {
-        if (pendingTick) {
-            pendingTick = false;
-            runSingleTest();
-        } else {
-            scheduleNextTest();
+        // ---- 2. Download ------------------------------------------------------
+        const dlProgress = $('download-progress-text');
+        const dlBar = $('download-bar');
+        if (dlProgress) dlProgress.textContent = 'Streaming…';
+        if (dlBar) dlBar.style.width = '30%';
+
+        try {
+            download = await measureDownloadSpeed(profile, live => {
+                if (dlProgress) dlProgress.textContent = 'Streaming — ' + live.toFixed(1) + ' Mbps';
+                if (dlBar) dlBar.style.width = '70%';
+            }, signal);
+
+            const mDownload = $('metric-download');
+            if (mDownload) mDownload.textContent = formatMbps(download);
+            if (download && download > peakDownload) peakDownload = download;
+            if (dlProgress) dlProgress.textContent = `Peak ${formatMbps(peakDownload)} Mbps`;
+            if (dlBar) dlBar.style.width = '100%';
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+            console.error('Download failed:', e);
+            const mDownload = $('metric-download');
+            if (mDownload) mDownload.textContent = '—';
+            if (dlProgress) dlProgress.textContent = 'Failed';
+            if (dlBar) dlBar.style.width = '0%';
         }
+
+        // ---- 3. Upload --------------------------------------------------------
+        const ulProgress = $('upload-progress-text');
+        const ulBar = $('upload-bar');
+        if (ulProgress) ulProgress.textContent = 'Sending payload…';
+        if (ulBar) ulBar.style.width = '40%';
+
+        try {
+            upload = await measureUploadSpeed(profile, signal);
+            const mUpload = $('metric-upload');
+            if (mUpload) mUpload.textContent = formatMbps(upload);
+            if (upload && upload > peakUpload) peakUpload = upload;
+            if (ulProgress) ulProgress.textContent = `Peak ${formatMbps(peakUpload)} Mbps`;
+            if (ulBar) ulBar.style.width = '100%';
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+            console.error('Upload failed:', e);
+            const mUpload = $('metric-upload');
+            if (mUpload) mUpload.textContent = '—';
+            if (ulProgress) ulProgress.textContent = 'Failed';
+            if (ulBar) ulBar.style.width = '0%';
+        }
+
+        // ---- Record -----------------------------------------------------------
+        const allOk = ping != null && download != null && upload != null;
+        const anyOk = ping != null || download != null || upload != null;
+        const record = {
+            timestamp: dateStr,
+            time: timeStr,
+            download: download == null ? null : round2(download),
+            upload: upload == null ? null : round2(upload),
+            ping: ping == null ? null : round1(ping),
+            jitter: jitter == null ? null : round1(jitter),
+            status: allOk ? 'Success' : (anyOk ? 'Partial' : 'Failed'),
+            server: lastServerLabel || null
+        };
+
+        testHistory.push(record);
+        if (testHistory.length > HISTORY_LIMIT) testHistory = testHistory.slice(-HISTORY_LIMIT);
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(testHistory)); } catch (e) { /* quota */ }
+
+        renderHistoryTable();
+        updateChartsFromHistory();
+    } finally {
+        isTesting = false;
+        activeAbortController = null;
+        if (singleBtn) singleBtn.disabled = false;
+        setStatus(isMonitoring ? 'Monitoring Active (Signal Loop)' : 'System Idle',
+            isMonitoring ? 'bg-emerald-500' : 'bg-slate-500');
+
+        setTimeout(() => {
+            if (!isTesting) {
+                const dlBar = $('download-bar');
+                const ulBar = $('upload-bar');
+                if (dlBar) dlBar.style.width = '0%';
+                if (ulBar) ulBar.style.width = '0%';
+            }
+        }, 1200);
     }
 }
 
