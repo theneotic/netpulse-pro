@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetPulse Pro - Enterprise Continuous Bandwidth & Latency Monitor</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#090d16',
+                        cardbg: '#111827',
+                        cardborder: '#1f293d',
+                        accentglow: '#6366f1'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body
+    class="bg-darkbg text-slate-100 min-h-screen font-sans antialiased selection:bg-indigo-500 selection:text-white pb-16">
+
+    <!-- Background Glow Effects -->
+    <div class="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="fixed top-1/3 right-1/4 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 relative z-10">
+
+        <!-- Header -->
+        <header
+            class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-800/80 pb-6 gap-4">
+            <div class="flex items-center space-x-3">
+                <div
+                    class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i data-lucide="activity" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="text-2xl font-extrabold tracking-tight text-white">NetPulse <span
+                                class="text-indigo-400 font-semibold">Pro</span></h1>
+                        <span
+                            class="text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 py-0.5 px-2.5 rounded-full font-semibold uppercase tracking-wider">Live
+                            Telemetry</span>
+                    </div>
+                    <p class="text-slate-400 text-sm mt-0.5">Autonomous continuous internet speed, jitter, and latency
+                        diagnostics.</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <div id="connection-badge"
+                    class="hidden sm:flex items-center space-x-2 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-medium text-slate-300">
+                    <i data-lucide="globe" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    <span id="server-location-text">Global CDN Node</span>
+                </div>
+                <div id="status-indicator"
+                    class="flex items-center space-x-2.5 bg-slate-900/90 px-4 py-2 rounded-xl border border-slate-800 text-sm shadow-inner">
+                    <span class="w-2.5 h-2.5 rounded-full bg-slate-500" id="status-dot"></span>
+                    <span id="status-text" class="font-medium text-slate-300">System Idle</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Controls Console -->
+        <div
+            class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-2xl mb-8 relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                <i data-lucide="sliders" class="w-40 h-40 text-white"></i>
+            </div>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center space-x-2">
+                <i data-lucide="cpu" class="w-4 h-4 text-indigo-400"></i>
+                <span>Monitoring Configuration</span>
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2 font-semibold">Test
+                        Interval</label>
+                    <div class="relative">
+                        <select id="interval-select"
+                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 appearance-none font-medium text-sm">
+                            <option value="60000">Every 1 Minute</option>
+                            <option value="300000" selected>Every 5 Minutes</option>
+                            <option value="900000">Every 15 Minutes</option>
+                            <option value="1800000">Every 30 Minutes</option>
+                            <option value="3600000">Every 1 Hour</option>
+                        </select>
+                        <div class="absolute right-3 top-3.5 pointer-events-none text-slate-400">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2 font-semibold">Payload
+                        Size</label>
+                    <div class="relative">
+                        <select id="size-select"
+                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 appearance-none font-medium text-sm">
+                            <option value="1">Light (~2 MB)</option>
+                            <option value="5" selected>Standard (~10 MB)</option>
+                            <option value="15">Heavy (~30 MB)</option>
+                        </select>
+                        <div class="absolute right-3 top-3.5 pointer-events-none text-slate-400">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex space-x-3">
+                    <button id="start-btn" onclick="startMonitoring()"
+                        class="flex-1 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 text-sm">
+                        <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                        <span>Start</span>
+                    </button>
+                    <button id="stop-btn" onclick="stopMonitoring()" disabled
+                        class="flex-1 bg-slate-800/80 text-slate-500 cursor-not-allowed font-semibold py-3 px-4 rounded-xl transition border border-slate-700/50 flex items-center justify-center space-x-2 text-sm">
+                        <i data-lucide="square" class="w-4 h-4 fill-current"></i>
+                        <span>Stop</span>
+                    </button>
+                </div>
+                <div>
+                    <button onclick="runSingleTest()" id="single-btn"
+                        class="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 hover:text-white font-semibold py-3 px-4 rounded-xl transition border border-slate-700 flex items-center justify-center space-x-2 text-sm shadow-sm">
+                        <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+                        <span>Run Test Now</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Metrics Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Download Card -->
+            <div
+                class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl relative overflow-hidden group hover:border-indigo-500/50 transition duration-300">
+                <div
+                    class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition">
+                </div>
+                <div class="flex justify-between items-center mb-3">
+                    <span
+                        class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center space-x-1.5">
+                        <i data-lucide="arrow-down-circle" class="w-4 h-4 text-indigo-400"></i>
+                        <span>Download</span>
+                    </span>
+                    <span class="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded font-mono">Mbps</span>
+                </div>
+                <div class="flex items-baseline space-x-2">
+                    <span id="metric-download" class="text-5xl font-black text-white tracking-tight">0.00</span>
+                </div>
+                <div
+                    class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60">
+                    <span id="download-progress-text" class="text-slate-400 font-medium">Ready to test</span>
+                    <div class="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div id="download-bar" class="bg-indigo-500 h-full w-0 transition-all duration-300"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Card -->
+            <div
+                class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl relative overflow-hidden group hover:border-emerald-500/50 transition duration-300">
+                <div
+                    class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition">
+                </div>
+                <div class="flex justify-between items-center mb-3">
+                    <span
+                        class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center space-x-1.5">
+                        <i data-lucide="arrow-up-circle" class="w-4 h-4 text-emerald-400"></i>
+                        <span>Upload</span>
+                    </span>
+                    <span
+                        class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-mono">Mbps</span>
+                </div>
+                <div class="flex items-baseline space-x-2">
+                    <span id="metric-upload" class="text-5xl font-black text-white tracking-tight">0.00</span>
+                </div>
+                <div
+                    class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60">
+                    <span id="upload-progress-text" class="text-slate-400 font-medium">Ready to test</span>
+                    <div class="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div id="upload-bar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ping Card -->
+            <div
+                class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl relative overflow-hidden group hover:border-amber-500/50 transition duration-300">
+                <div
+                    class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition">
+                </div>
+                <div class="flex justify-between items-center mb-3">
+                    <span
+                        class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center space-x-1.5">
+                        <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
+                        <span>Ping / Latency</span>
+                    </span>
+                    <span class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono">ms</span>
+                </div>
+                <div class="flex items-baseline space-x-2">
+                    <span id="metric-ping" class="text-5xl font-black text-white tracking-tight">0</span>
+                </div>
+                <div
+                    class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60">
+                    <span id="ping-status-text" class="text-slate-400 font-medium">Round trip time</span>
+                    <span id="ping-quality" class="text-slate-500 font-semibold">—</span>
+                </div>
+            </div>
+
+            <!-- Jitter Card -->
+            <div
+                class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl relative overflow-hidden group hover:border-cyan-500/50 transition duration-300">
+                <div
+                    class="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition">
+                </div>
+                <div class="flex justify-between items-center mb-3">
+                    <span
+                        class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center space-x-1.5">
+                        <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i>
+                        <span>Jitter</span>
+                    </span>
+                    <span class="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded font-mono">ms</span>
+                </div>
+                <div class="flex items-baseline space-x-2">
+                    <span id="metric-jitter" class="text-5xl font-black text-white tracking-tight">0</span>
+                </div>
+                <div
+                    class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60">
+                    <span id="jitter-status-text" class="text-slate-400 font-medium">Variance stability</span>
+                    <span id="jitter-quality" class="text-slate-500 font-semibold">—</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-base font-bold text-slate-200 flex items-center space-x-2">
+                        <i data-lucide="trending-up" class="w-4 h-4 text-indigo-400"></i>
+                        <span>Bandwidth Performance (Mbps)</span>
+                    </h3>
+                    <span class="text-xs text-slate-500 font-mono">Last 20 Tests</span>
+                </div>
+                <div class="relative h-80">
+                    <canvas id="bandwidthChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-base font-bold text-slate-200 flex items-center space-x-2">
+                        <i data-lucide="pulse" class="w-4 h-4 text-amber-400"></i>
+                        <span>Latency & Jitter (ms)</span>
+                    </h3>
+                    <span class="text-xs text-slate-500 font-mono">Last 20 Tests</span>
+                </div>
+                <div class="relative h-80">
+                    <canvas id="latencyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Table & Export -->
+        <div class="bg-cardbg/80 backdrop-blur-xl rounded-2xl p-6 border border-cardborder shadow-xl">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <div>
+                    <h3 class="text-base font-bold text-slate-200 flex items-center space-x-2">
+                        <i data-lucide="file-text" class="w-4 h-4 text-indigo-400"></i>
+                        <span>Test History Logs</span>
+                    </h3>
+                    <p class="text-slate-400 text-xs mt-0.5">Persistent records stored locally in browser storage.</p>
+                </div>
+                <div class="flex space-x-3 w-full sm:w-auto">
+                    <button onclick="exportCSV()"
+                        class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-700 transition flex items-center justify-center space-x-2">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>Export CSV</span>
+                    </button>
+                    <button onclick="clearHistory()"
+                        class="flex-1 sm:flex-none bg-rose-950/40 hover:bg-rose-900/60 active:scale-95 text-rose-300 px-4 py-2.5 rounded-xl text-sm font-semibold border border-rose-900/50 transition flex items-center justify-center space-x-2">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        <span>Clear History</span>
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr
+                            class="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400 font-bold">
+                            <th class="py-3 px-4">Timestamp</th>
+                            <th class="py-3 px-4">Download</th>
+                            <th class="py-3 px-4">Upload</th>
+                            <th class="py-3 px-4">Ping</th>
+                            <th class="py-3 px-4">Jitter</th>
+                            <th class="py-3 px-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body"
+                        class="divide-y divide-slate-800/60 text-sm text-slate-300 font-medium">
+                        <tr>
+                            <td colspan="6" class="py-8 text-center text-slate-500 font-normal">No test history recorded
+                                yet. Start monitoring or run a single test.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Initialize Lucide Icons -->
+    <script>
+        lucide.createIcons();
+    </script>
+    <!-- Main Script -->
+    <script src="script.js"></script>
+</body>
+
+</html>

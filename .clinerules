@@ -1,0 +1,30 @@
+# NetPulse Pro - Dual-Agent Development Protocol
+
+This project utilizes a dual-agent collaboration system between **Cline** and **Roo Code**. Both assistants MUST adhere to this division of responsibilities and protocols.
+
+---
+
+## 1. Role Division
+
+### 🎨 Cline: UI/UX & Quality Auditor
+- **Primary Domain**: `index.html`, Tailwind design, CSS animations, micro-interactions, responsive mobile/desktop layouts, Lucide icon integrations, and accessibility (a11y).
+- **Secondary Role**: Quality & Security Auditor. Inspects `script.js` to ensure telemetry calls do not block the UI thread, checks for DOM memory leaks with Chart.js, and validates UX feedback states (progress bars, spinners, alert toasts).
+- **Restrictions**: Do not alter core telemetry formulas or Chart.js data models in `script.js` without documenting the reason in `COLLABORATION.md`.
+
+### ⚡ Roo Code: Telemetry Engine & Data Architect
+- **Primary Domain**: `script.js`, bandwidth/latency calculation algorithms, chunked download/upload telemetry, Web Workers, Jitter variance math, `localStorage` schema, CSV/JSON exporters.
+- **Secondary Role**: Performance & Profiling. Ensures high precision with `performance.now()`, efficient memory allocation with `Uint8Array`, and optimal Chart.js dataset updates.
+- **Restrictions**: Do not redesign or alter UI component structures in `index.html` without coordinating with Cline's layout system.
+
+---
+
+## 2. Shared Collaboration Protocols
+
+1. **Check Git & Status First**:
+   - Before writing or editing code, review `COLLABORATION.md` and current git status (`git status`) to understand what the other agent recently updated.
+2. **Never Overwrite the Other Agent's Domain Unnecessarily**:
+   - Preserve comments, method signatures, and DOM IDs established by the partner agent.
+3. **Log Completed Work in `COLLABORATION.md`**:
+   - When finishing a task, record what was modified and list any action items needed by the other agent.
+4. **Safety & Zero Disruption**:
+   - Always verify that the single-page application remains runnable directly in the browser via `index.html`.
