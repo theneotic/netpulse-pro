@@ -210,7 +210,25 @@ function initEventListeners() {
     if (sizeSel) {
         sizeSel.addEventListener('change', () => {
             try { localStorage.setItem(SIZE_KEY, sizeSel.value); } catch (e) {}
+            toggleCustomSizeVisibility();
         });
+    }
+    const customInput = $('custom-size-input');
+    if (customInput) {
+        customInput.addEventListener('input', () => {
+            try { localStorage.setItem('netpulse_custom_size', customInput.value); } catch (e) {}
+        });
+    }
+}
+
+function toggleCustomSizeVisibility() {
+    const sizeSel = $('size-select');
+    const container = $('custom-size-container');
+    if (!sizeSel || !container) return;
+    if (sizeSel.value === 'custom') {
+        container.classList.remove('hidden');
+    } else {
+        container.classList.add('hidden');
     }
 }
 
@@ -233,6 +251,14 @@ function restoreSavedConfig() {
             }
         } catch (e) { /* storage unavailable */ }
     }
+    const customInput = $('custom-size-input');
+    if (customInput) {
+        try {
+            const savedCustom = localStorage.getItem('netpulse_custom_size');
+            if (savedCustom) customInput.value = savedCustom;
+        } catch (e) { /* storage unavailable */ }
+    }
+    toggleCustomSizeVisibility();
 }
 
 /* ============================ Measurement engine ========================== */
@@ -358,11 +384,22 @@ async function measureDownloadOnce(bytes, onLive, timeoutMs, signal) {
 }
 
 /**
- * Download speed with fallback for slow links.
+ * Download speed with fallback for slow links and support for custom payload sizes.
  */
 async function measureDownloadSpeed(profile, onLive, signal) {
-    const size = DOWNLOAD_SIZES[String(profile)] || (256 * KB);
-    let mbps = await measureDownloadOnce(size, onLive, DOWNLOAD_TIMEOUT_MS, signal);
+    let size;
+    if (typeof profile === 'number' && profile > 0) {
+        size = profile;
+    } else if (profile === 'custom') {
+        const customInput = $('custom-size-input');
+        const customMb = customInput ? (parseFloat(customInput.value) || 10) : 10;
+        size = Math.round(Math.max(0.1, customMb) * MB);
+    } else {
+        size = DOWNLOAD_SIZES[String(profile)] || (256 * KB);
+    }
+
+    const timeout = Math.max(DOWNLOAD_TIMEOUT_MS, Math.round((size / MB) * 4000));
+    let mbps = await measureDownloadOnce(size, onLive, timeout, signal);
 
     if (mbps == null) {
         // Fallback retry with smaller 64 KB probe
@@ -412,14 +449,25 @@ async function measureUploadOnce(bytes, seed, timeoutMs, signal) {
 }
 
 /**
- * Upload speed with high-entropy binary payload.
+ * Upload speed with high-entropy binary payload and support for custom payload sizes.
  */
 async function measureUploadSpeed(profile, signal) {
-    const size = UPLOAD_SIZES[String(profile)] || (128 * KB);
+    let size;
+    if (typeof profile === 'number' && profile > 0) {
+        size = profile;
+    } else if (profile === 'custom') {
+        const customInput = $('custom-size-input');
+        const customMb = customInput ? (parseFloat(customInput.value) || 10) : 10;
+        size = Math.round(Math.max(0.05, customMb * 0.5) * MB);
+    } else {
+        size = UPLOAD_SIZES[String(profile)] || (128 * KB);
+    }
+
     const seed = new Uint8Array(Math.min(size, 65536));
     window.crypto.getRandomValues(seed);
 
-    let mbps = await measureUploadOnce(size, seed, UPLOAD_TIMEOUT_MS, signal);
+    const timeout = Math.max(UPLOAD_TIMEOUT_MS, Math.round((size / MB) * 4000));
+    let mbps = await measureUploadOnce(size, seed, timeout, signal);
 
     if (mbps == null) {
         // Fallback retry with smaller 32 KB probe
