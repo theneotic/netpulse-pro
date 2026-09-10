@@ -1,0 +1,11 @@
+# Vercel upload exclusions
+.git
+.gitignore
+repos/
+node_modules/
+.vercel/
+*.log
+.vscode/
+.agents/
+plans/
+tests/

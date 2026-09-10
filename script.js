@@ -290,8 +290,7 @@ async function measureDownloadOnce(bytes, onLive, timeoutMs) {
     try {
         const res = await fetchWithTimeout(url, {
             method: 'GET',
-            cache: 'no-store',
-            headers: { 'Cache-Control': 'no-cache', 'Accept-Encoding': 'identity' }
+            cache: 'no-store'
         }, timeoutMs || DOWNLOAD_TIMEOUT_MS);
         if (!res.ok || !res.body) return null;
 

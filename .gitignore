@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Vercel local project link
+.vercel/
+
 # Environment and secrets
 .env
 .env*.local
