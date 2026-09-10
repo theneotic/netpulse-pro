@@ -292,19 +292,35 @@ async function measureDownloadOnce(bytes, onLive, timeoutMs) {
             method: 'GET',
             cache: 'no-store'
         }, timeoutMs || DOWNLOAD_TIMEOUT_MS);
-        if (!res.ok || !res.body) return null;
+        if (!res.ok) {
+            console.warn('Download HTTP response not OK:', res.status, res.statusText);
+            return null;
+        }
 
-        const reader = res.body.getReader();
-        for (;;) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            totalBytes += value.length;
-            if (typeof onLive === 'function') {
-                const sec = (performance.now() - startedAt) / 1000;
-                if (sec > 0) onLive((totalBytes * 8) / (sec * 1e6));
+        if (res.body && typeof res.body.getReader === 'function') {
+            try {
+                const reader = res.body.getReader();
+                for (;;) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    totalBytes += value.length;
+                    if (typeof onLive === 'function') {
+                        const sec = (performance.now() - startedAt) / 1000;
+                        if (sec > 0) onLive((totalBytes * 8) / (sec * 1e6));
+                    }
+                }
+            } catch (streamErr) {
+                console.warn('Stream reader interrupted, draining via blob:', streamErr);
             }
         }
+        
+        // Fallback if reader didn't collect bytes (or wasn't supported)
+        if (totalBytes === 0) {
+            const blob = await res.blob();
+            totalBytes = blob.size;
+        }
     } catch (e) {
+        console.error('measureDownloadOnce network/CORS error on ' + url + ':', e);
         return null;
     }
 
