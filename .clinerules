@@ -28,3 +28,47 @@ This project utilizes a dual-agent collaboration system between **Cline** and **
    - When finishing a task, record what was modified and list any action items needed by the other agent.
 4. **Safety & Zero Disruption**:
    - Always verify that the single-page application remains runnable directly in the browser via `index.html`.
+
+---
+
+## 3. Andrej Karpathy Engineering Guidelines
+
+Both agents (Cline and Roo Code) must follow these behavioral guidelines derived from Andrej Karpathy's core software engineering principles:
+
+### 1. Think Before Coding
+- **Don't assume. Don't hide confusion. Surface tradeoffs.**
+- State assumptions explicitly before implementing. If uncertain, ask rather than guess.
+- If multiple interpretations exist, present them — do not pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what is confusing and clarify.
+
+### 2. Simplicity First
+- **Minimum code that solves the problem. Nothing speculative.**
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+- **The test:** Would a senior engineer say this is overcomplicated? If yes, simplify.
+
+### 3. Surgical Changes
+- **Touch only what you must. Clean up only your own mess.**
+- When editing existing code:
+  - Do NOT "improve" adjacent code, comments, or formatting.
+  - Do NOT refactor things that aren't broken.
+  - Match existing style, even if you'd do it differently.
+  - If you notice unrelated dead code, mention it — don't delete it.
+- When your changes create orphans:
+  - Remove imports/variables/functions that YOUR changes made unused.
+  - Do not remove pre-existing dead code unless explicitly asked.
+- **The test:** Every changed line should trace directly to the prompt.
+
+### 4. Goal-Driven Execution
+- **Define success criteria. Loop until verified.**
+- Transform imperative tasks into verifiable goals with concrete tests.
+- For multi-step tasks, state a brief plan:
+  1. `[Step]` → verify: `[check]`
+  2. `[Step]` → verify: `[check]`
+  3. `[Step]` → verify: `[check]`
+- Verify functionality against concrete checks before reporting completion.
+

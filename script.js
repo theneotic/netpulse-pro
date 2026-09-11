@@ -87,8 +87,10 @@ let latencyChart = null;
 
 /* ------------------------------ Small helpers ----------------------------- */
 function $(id) {
+    if (typeof document === 'undefined' || typeof document.getElementById !== 'function') return null;
     return document.getElementById(id);
 }
+
 
 function formatMbps(mbps) {
     return (mbps == null || Number.isNaN(mbps)) ? '0.00' : mbps.toFixed(2);
@@ -967,3 +969,221 @@ if (typeof window !== 'undefined') {
     window.exportCSV = exportCSV;
     window.exportJSON = exportJSON;
 }
+
+/* -------------------- Calculator Desk (Cline UI/UX) -----------------------
+ * UI/UX enhancement per COLLABORATION.md — drives the scientific keypad,
+ * LCD display, and step-by-step solver. No telemetry or Chart.js paths
+ * are touched. Uses the existing $() and escapeHtml() helpers above.
+ * ------------------------------------------------------------------ */
+function appendMathKey(key) {
+    const input = $('math-expression-input');
+    if (!input) return;
+    input.value += key;
+    input.focus();
+    syncCalculatorDisplay();
+}
+
+function clearMathInput() {
+    const input = $('math-expression-input');
+    if (!input) return;
+    input.value = '';
+    input.focus();
+    syncCalculatorDisplay();
+    const output = $('math-solution-output');
+    const status = $('solution-status');
+    if (output) output.innerHTML = '';
+    if (status) status.textContent = 'Ready';
+}
+
+// Mirror the live expression field onto the calculator LCD (top segment).
+function syncCalculatorDisplay() {
+    const input = $('math-expression-input');
+    const exprEl = $('calc-expr');
+    if (!exprEl) return;
+    const raw = input ? input.value.trim() : '';
+    exprEl.textContent = raw.length ? raw : '0';
+}
+
+// Push a computed value onto the calculator LCD (result segment) + glow pulse.
+function syncCalcResult(expr, result) {
+    const exprEl = $('calc-expr');
+    const resultEl = $('calc-result');
+    if (exprEl) exprEl.textContent = expr ? expr : '0';
+    if (!resultEl) return;
+    const pretty = formatCalcResult(result);
+    resultEl.textContent = pretty;
+    if (pretty !== '—') {
+        void resultEl.offsetWidth; // restart the glow animation
+        resultEl.classList.add('calc-glow');
+    } else {
+        resultEl.classList.remove('calc-glow');
+    }
+}
+
+function formatCalcResult(value) {
+    if (value == null) return '—';
+    if (typeof value === 'object') {
+        try { return JSON.stringify(value); } catch (e) { return String(value); }
+    }
+    if (typeof value === 'number') {
+        if (!isFinite(value)) return String(value);
+        if (Number.isInteger(value)) return String(value);
+        return parseFloat(value.toPrecision(10)).toString();
+    }
+    return String(value);
+}
+
+// Numeric backspace — remove the last character.
+function backspaceMath() {
+    const input = $('math-expression-input');
+    if (!input) return;
+    input.value = input.value.slice(0, -1);
+    input.focus();
+    syncCalculatorDisplay();
+}
+
+// Toggle the sign of the trailing numeric operand in the expression.
+function toggleSignMath() {
+    const input = $('math-expression-input');
+    if (!input) return;
+    const v = input.value;
+    if (!v.trim()) { input.value = '-'; input.focus(); syncCalculatorDisplay(); return; }
+    const token = /(-?)([0-9]*\.?[0-9]+(?:e[+-]?[0-9]+)?)/g;
+    let last = null, m;
+    while ((m = token.exec(v)) !== null) last = m;
+    if (last) {
+        input.value = last[1] === '-'
+            ? v.slice(0, last.index) + last[2] + v.slice(last.index + last[0].length)
+            : v.slice(0, last.index) + '-' + last[2] + v.slice(last.index + last[0].length);
+    } else {
+        input.value = v.charAt(0) === '-' ? v.slice(1) : '-' + v;
+    }
+    input.focus();
+    syncCalculatorDisplay();
+}
+
+// Keyboard accessibility while the calculator desk has focus.
+function onCalcKey(e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const desk = $('math');
+    if (!desk || !desk.contains(e.target)) return;
+    if (e.key === 'Enter' || e.key === '=') {
+        e.preventDefault();
+        solveMathExpression();
+    } else if (e.key === 'Escape') {
+        e.preventDefault();
+        clearMathInput();
+    } else if (e.target.tagName !== 'INPUT' && (e.key === 'Backspace' || e.key === 'Delete')) {
+        e.preventDefault();
+        backspaceMath();
+    } else if (e.target.tagName !== 'INPUT' && e.key.length === 1 && /[0-9.+\-*/%()^!=]/.test(e.key)) {
+        const btn = document.querySelector('#calc-keypad [data-key="' + e.key + '"]');
+        if (btn) { e.preventDefault(); btn.click(); }
+    }
+}
+
+function solveMathExpression() {
+    const input = $('math-expression-input');
+    const output = $('math-solution-output');
+    const status = $('solution-status');
+    if (!input || !output || !status) return;
+
+    const expr = input.value.trim();
+    if (!expr) {
+        alert('Please enter a mathematical expression.');
+        return;
+    }
+
+    if (typeof math === 'undefined') {
+        status.textContent = 'Math.js Not Loaded';
+        output.innerHTML = '<p class="text-[#e84d31] font-bold">Math.js failed to load from CDN. Check your connection and reload the page.</p>';
+        return;
+    }
+
+    status.textContent = 'Calculating Steps...';
+    syncCalcResult(expr, null);
+
+    try {
+        let result;
+        const steps = [];
+
+        steps.push(`1. Input Expression: <code>${escapeHtml(expr)}</code>`);
+
+        if (expr.startsWith('det(')) {
+            const evaluated = math.evaluate(expr);
+            steps.push('2. Parsing Matrix and computing Determinant via Laplace expansion / LU decomposition.');
+            steps.push(`3. Resulting Determinant Value: <strong class="text-[#e84d31]">${JSON.stringify(evaluated)}</strong>`);
+            result = evaluated;
+        } else if (expr.startsWith('inv(')) {
+            const evaluated = math.evaluate(expr);
+            steps.push('2. Computing Matrix Inverse via Gauss-Jordan elimination.');
+            steps.push(`3. Resulting Inverse Matrix: <strong class="text-[#e84d31]">${JSON.stringify(evaluated)}</strong>`);
+            result = evaluated;
+        } else if (expr.startsWith('derivative(')) {
+            steps.push('2. Applying Power Rule, Chain Rule, and Sum/Difference identities.');
+            // Robust parse: strip the 'derivative(' prefix and trailing ')' directly,
+            // then split on the LAST comma so nested commas (matrices etc.) keep
+            // correct variable detection. Falls back to variable 'x'.
+            const inner = expr.slice('derivative('.length, -1);
+            const comma = inner.lastIndexOf(',');
+            const dExpr = (comma >= 0 ? inner.slice(0, comma) : inner).trim();
+            const dVar = ((comma >= 0 ? inner.slice(comma + 1) : 'x').trim() || 'x');
+            if (!dExpr) throw new Error('derivative() requires an <expression> and <variable>.');
+            const evaluated = math.derivative(dExpr, dVar).toString();
+            steps.push(`3. Simplified Derivative <code>d/d${escapeHtml(dVar)}</code>: <strong class="text-[#e84d31]">${escapeHtml(evaluated)}</strong>`);
+            result = evaluated;
+        } else if (expr.startsWith('integrate(')) {
+            // Math.js v12 exposes no symbolic integration primitive — surface a
+            // graceful, actionable message instead of an opaque parser error.
+            steps.push('2. Searching Math.js operator table for an indefinite integral primitive...');
+            steps.push('<strong class="text-[#e84d31]">Symbolic integration is not supported by the loaded Math.js build.</strong> Use <code>d/dx</code> for derivatives or reformulate as a numeric sum.');
+            result = null;
+        } else {
+            const evaluated = math.evaluate(expr);
+            steps.push('2. Simplifying trigonometric, algebraic, and logarithmic terms.');
+            steps.push(`3. Numerical / Symbolic Evaluation: <strong class="text-[#e84d31]">${typeof evaluated === 'object' ? JSON.stringify(evaluated) : evaluated}</strong>`);
+            result = evaluated;
+        }
+
+        status.textContent = (result === null && expr.startsWith('integrate(')) ? 'Integration Unsupported' : 'Solved Successfully';
+
+        output.innerHTML = steps.map((s, i) =>
+            `<p class="step-item border-l-2 border-[#e84d31] pl-3 py-1.5" style="animation-delay:${i * 85}ms">${s}</p>`
+        ).join('');
+
+        // Mirror the final value onto the calculator LCD.
+        syncCalcResult(expr, result);
+
+    } catch (err) {
+        status.textContent = 'Calculation Error';
+        output.innerHTML = `<p class="text-[#e84d31] font-bold">Error evaluating expression: ${escapeHtml(err.message)}</p>`;
+        syncCalcResult(expr, 'Error');
+    }
+}
+
+function initCalculator() {
+    if (typeof document === 'undefined' || typeof document.getElementById !== 'function') return;
+    const input = $('math-expression-input');
+    if (input && typeof input.addEventListener === 'function') {
+        input.addEventListener('input', syncCalculatorDisplay);
+        input.addEventListener('keydown', onCalcKey);
+    }
+    if (typeof document.addEventListener === 'function') {
+        document.addEventListener('keydown', onCalcKey);
+    }
+    syncCalculatorDisplay();
+}
+
+// Wire calculator desk listeners on DOM ready (idempotent).
+initCalculator();
+
+/* -------------------- Window bindings (calculator desk) -------------------- */
+if (typeof window !== 'undefined') {
+    window.appendMathKey = appendMathKey;
+    window.clearMathInput = clearMathInput;
+    window.solveMathExpression = solveMathExpression;
+    window.backspaceMath = backspaceMath;
+    window.toggleSignMath = toggleSignMath;
+}
+
+
